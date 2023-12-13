@@ -854,6 +854,17 @@ class Security extends Controller implements TemplateGlobalProvider
             $handlers ?? []
         );
 
+        // Loop through results, return any HTTPResponse
+         if (in_array(true, array_map(fn ($result) => $result instanceof HTTPResponse, $results), true)) {
+            return current(array_filter($results, fn ($result) => $result instanceof HTTPResponse));
+        }
+        // or
+        // foreach ($results as $result) {
+        //     if ($result instanceof HTTPResponse) {
+        //         return $result; // Returns the HTTPResponse for actions that aren't available
+        //     }
+        //}
+        
         $response = call_user_func_array($aggregator, [$results]);
         // The return could be a HTTPResponse, in which we don't want to call the render
         if (is_array($response)) {
