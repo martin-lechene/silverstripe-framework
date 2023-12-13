@@ -7,6 +7,7 @@ use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
+use SilverStripe\Control\RequestHandler;
 use SilverStripe\Control\Session;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Convert;
@@ -820,4 +821,30 @@ class SecurityTest extends FunctionalTest
         }
         return null;
     }
+
+
+    /**
+     *  Test for DelegateToMultipleHandlers() in Security.php
+     *  @return void
+     */
+    protected function testDelegateToMultipleHandlers()
+    {
+        $security = new Security(); // Assurez-vous d'adapter le namespace et la classe selon votre projet
+        $handler1 = $this->getMockBuilder(RequestHandler::class)->getMock();
+        $handler2 = $this->getMockBuilder(RequestHandler::class)->getMock();
+
+        // Simulation of HTTPResponse
+        $handler2->expects($this->once())
+            ->method('handleRequest')
+            ->willReturn(new HTTPResponse('This is an HTTPResponse', 404));
+
+        $result = $security->delegateToMultipleHandlers([$handler1, $handler2], 'Test Title', ['template'], function ($results) {
+            return 'Aggregated Result';
+        });
+
+        $this->assertInstanceOf(HTTPResponse::class, $result);
+        $this->assertEquals('This is an HTTPResponse', $result->getBody());
+        $this->assertEquals(404, $result->getStatusCode());
+    }
+
 }
