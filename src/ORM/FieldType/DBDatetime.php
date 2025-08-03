@@ -2,6 +2,7 @@
 
 namespace SilverStripe\ORM\FieldType;
 
+use DateTime;
 use Exception;
 use IntlDateFormatter;
 use InvalidArgumentException;
@@ -58,7 +59,7 @@ class DBDatetime extends DBDate implements TemplateGlobalProvider
      * @param bool $immutable
      * @return $this
      */
-    public function setImmutable(bool $immutable): self
+    public function setImmutable(bool $immutable): DBDatetime
     {
         $this->immutable = $immutable;
 
@@ -172,7 +173,7 @@ class DBDatetime extends DBDate implements TemplateGlobalProvider
      */
     public function URLDatetime()
     {
-        return rawurlencode($this->Format(self::ISO_DATETIME, self::ISO_LOCALE) ?? '');
+        return rawurlencode($this->Format(DBDatetime::ISO_DATETIME, DBDatetime::ISO_LOCALE) ?? '');
     }
 
     public function scaffoldFormField($title = null, $params = null)
@@ -196,6 +197,66 @@ class DBDatetime extends DBDate implements TemplateGlobalProvider
     }
 
     /**
+     * Get the amount of time inbetween two datetimes.
+     */
+    public static function getTimeBetween(DBDateTime $from, DBDateTime $to): string
+    {
+        $fromRaw = new DateTime();
+        $fromRaw->setTimestamp((int) $from->getTimestamp());
+        $toRaw = new DateTime();
+        $toRaw->setTimestamp((int) $to->getTimestamp());
+        $diff = $fromRaw->diff($toRaw);
+        $result = [];
+        if ($diff->y) {
+            $result[] = _t(
+                __CLASS__ . '.nYears',
+                'one year|{count} years',
+                ['count' => $diff->y]
+            );
+        }
+        if ($diff->m) {
+            $result[] = _t(
+                __CLASS__ . '.nMonths',
+                'one month|{count} months',
+                ['count' => $diff->m]
+            );
+        }
+        if ($diff->d) {
+            $result[] = _t(
+                __CLASS__ . '.nDays',
+                'one day|{count} days',
+                ['count' => $diff->d]
+            );
+        }
+        if ($diff->h) {
+            $result[] = _t(
+                __CLASS__ . '.nHours',
+                'one hour|{count} hours',
+                ['count' => $diff->h]
+            );
+        }
+        if ($diff->i) {
+            $result[] = _t(
+                __CLASS__ . '.nMinutes',
+                'one minute|{count} minutes',
+                ['count' => $diff->i]
+            );
+        }
+        $message = _t(
+            __CLASS__ . '.nSeconds',
+            'one second|{count} seconds',
+            ['count' => $diff->s ?? 0]
+        );
+        if ($diff->s) {
+            $result[] = $message;
+        }
+        if (empty($result)) {
+            return $message;
+        }
+        return implode(', ', $result);
+    }
+
+    /**
      *
      */
     protected static $mock_now = null;
@@ -208,7 +269,7 @@ class DBDatetime extends DBDate implements TemplateGlobalProvider
      */
     public static function now()
     {
-        $time = self::$mock_now ? self::$mock_now->Value : time();
+        $time = DBDatetime::$mock_now ? DBDatetime::$mock_now->Value : time();
 
         /** @var DBDatetime $now */
         $now = DBField::create_field('Datetime', $time);
@@ -233,7 +294,7 @@ class DBDatetime extends DBDate implements TemplateGlobalProvider
                 throw new InvalidArgumentException('DBDatetime::set_mock_now(): Wrong format: ' . $value);
             }
         }
-        self::$mock_now = $datetime;
+        DBDatetime::$mock_now = $datetime;
     }
 
     /**
@@ -242,7 +303,7 @@ class DBDatetime extends DBDate implements TemplateGlobalProvider
      */
     public static function clear_mock_now()
     {
-        self::$mock_now = null;
+        DBDatetime::$mock_now = null;
     }
 
     /**
@@ -255,14 +316,14 @@ class DBDatetime extends DBDate implements TemplateGlobalProvider
      */
     public static function withFixedNow($time, $callback)
     {
-        $original = self::$mock_now;
+        $original = DBDatetime::$mock_now;
 
         try {
-            self::set_mock_now($time);
+            DBDatetime::set_mock_now($time);
 
             return $callback();
         } finally {
-            self::$mock_now = $original;
+            DBDatetime::$mock_now = $original;
         }
     }
 
@@ -324,6 +385,6 @@ class DBDatetime extends DBDate implements TemplateGlobalProvider
      */
     public function getISOFormat()
     {
-        return self::ISO_DATETIME;
+        return DBDatetime::ISO_DATETIME;
     }
 }

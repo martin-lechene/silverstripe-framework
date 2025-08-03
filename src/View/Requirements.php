@@ -31,7 +31,7 @@ class Requirements implements Flushable
     {
         $disabled = Config::inst()->get(static::class, 'disable_flush_combined');
         if (!$disabled) {
-            self::delete_all_combined_files();
+            Requirements::delete_all_combined_files();
         }
     }
 
@@ -42,7 +42,7 @@ class Requirements implements Flushable
      */
     public static function set_combined_files_enabled($enable)
     {
-        self::backend()->setCombinedFilesEnabled($enable);
+        Requirements::backend()->setCombinedFilesEnabled($enable);
     }
 
     /**
@@ -52,7 +52,7 @@ class Requirements implements Flushable
      */
     public static function get_combined_files_enabled()
     {
-        return self::backend()->getCombinedFilesEnabled();
+        return Requirements::backend()->getCombinedFilesEnabled();
     }
 
     /**
@@ -62,7 +62,7 @@ class Requirements implements Flushable
      */
     public static function set_combined_files_folder($folder)
     {
-        self::backend()->setCombinedFilesFolder($folder);
+        Requirements::backend()->setCombinedFilesFolder($folder);
     }
 
     /**
@@ -75,7 +75,7 @@ class Requirements implements Flushable
      */
     public static function set_suffix_requirements($var)
     {
-        self::backend()->setSuffixRequirements($var);
+        Requirements::backend()->setSuffixRequirements($var);
     }
 
     /**
@@ -85,7 +85,7 @@ class Requirements implements Flushable
      */
     public static function get_suffix_requirements()
     {
-        return self::backend()->getSuffixRequirements();
+        return Requirements::backend()->getSuffixRequirements();
     }
 
     /**
@@ -101,10 +101,10 @@ class Requirements implements Flushable
      */
     public static function backend()
     {
-        if (!self::$backend) {
-            self::$backend = Requirements_Backend::create();
+        if (!Requirements::$backend) {
+            Requirements::$backend = Requirements_Backend::create();
         }
-        return self::$backend;
+        return Requirements::$backend;
     }
 
     /**
@@ -114,7 +114,7 @@ class Requirements implements Flushable
      */
     public static function set_backend(Requirements_Backend $backend)
     {
-        self::$backend = $backend;
+        Requirements::$backend = $backend;
     }
 
     /**
@@ -128,7 +128,7 @@ class Requirements implements Flushable
      */
     public static function javascript($file, $options = [])
     {
-        self::backend()->javascript($file, $options);
+        Requirements::backend()->javascript($file, $options);
     }
 
     /**
@@ -139,7 +139,22 @@ class Requirements implements Flushable
      */
     public static function customScript($script, $uniquenessID = null)
     {
-        self::backend()->customScript($script, $uniquenessID);
+        Requirements::backend()->customScript($script, $uniquenessID);
+    }
+
+    /**
+     * Register the given Javascript code into the list of requirements with optional tag
+     * attributes.
+     *
+     * @param string $script The script content as a string (without enclosing `<script>` tag)
+     * @param array $options List of options. Available options include:
+     * - 'type' : Specifies the type of script
+     * - 'crossorigin' : Cross-origin policy for the resource
+     * @param string|int|null $uniquenessID A unique ID that ensures a piece of code is only added once
+     */
+    public static function customScriptWithAttributes(string $script, array $options = [], string|int|null $uniquenessID = null)
+    {
+        Requirements::backend()->customScriptWithAttributes($script, $options, $uniquenessID);
     }
 
     /**
@@ -149,7 +164,7 @@ class Requirements implements Flushable
      */
     public static function get_custom_scripts()
     {
-        return self::backend()->getCustomScripts();
+        return Requirements::backend()->getCustomScripts();
     }
 
     /**
@@ -160,7 +175,7 @@ class Requirements implements Flushable
      */
     public static function customCSS($script, $uniquenessID = null)
     {
-        self::backend()->customCSS($script, $uniquenessID);
+        Requirements::backend()->customCSS($script, $uniquenessID);
     }
 
     /**
@@ -171,7 +186,7 @@ class Requirements implements Flushable
      */
     public static function insertHeadTags($html, $uniquenessID = null)
     {
-        self::backend()->insertHeadTags($html, $uniquenessID);
+        Requirements::backend()->insertHeadTags($html, $uniquenessID);
     }
 
     /**
@@ -184,7 +199,7 @@ class Requirements implements Flushable
      */
     public static function javascriptTemplate($file, $vars, $uniquenessID = null)
     {
-        self::backend()->javascriptTemplate($file, $vars, $uniquenessID);
+        Requirements::backend()->javascriptTemplate($file, $vars, $uniquenessID);
     }
 
     /**
@@ -199,7 +214,7 @@ class Requirements implements Flushable
      */
     public static function css($file, $media = null, $options = [])
     {
-        self::backend()->css($file, $media, $options);
+        Requirements::backend()->css($file, $media, $options);
     }
 
     /**
@@ -215,7 +230,7 @@ class Requirements implements Flushable
      */
     public static function themedCSS($name, $media = null)
     {
-        self::backend()->themedCSS($name, $media);
+        Requirements::backend()->themedCSS($name, $media);
     }
 
     /**
@@ -231,7 +246,7 @@ class Requirements implements Flushable
      */
     public static function themedJavascript($name, $type = null)
     {
-        self::backend()->themedJavascript($name, $type);
+        Requirements::backend()->themedJavascript($name, $type);
     }
 
     /**
@@ -244,7 +259,7 @@ class Requirements implements Flushable
      */
     public static function clear($fileOrID = null)
     {
-        self::backend()->clear($fileOrID);
+        Requirements::backend()->clear($fileOrID);
     }
 
     /**
@@ -252,7 +267,7 @@ class Requirements implements Flushable
      */
     public static function restore()
     {
-        self::backend()->restore();
+        Requirements::backend()->restore();
     }
 
     /**
@@ -270,7 +285,7 @@ class Requirements implements Flushable
      */
     public static function block($fileOrID)
     {
-        self::backend()->block($fileOrID);
+        Requirements::backend()->block($fileOrID);
     }
 
     /**
@@ -280,7 +295,7 @@ class Requirements implements Flushable
      */
     public static function unblock($fileOrID)
     {
-        self::backend()->unblock($fileOrID);
+        Requirements::backend()->unblock($fileOrID);
     }
 
     /**
@@ -288,7 +303,7 @@ class Requirements implements Flushable
      */
     public static function unblock_all()
     {
-        self::backend()->unblockAll();
+        Requirements::backend()->unblockAll();
     }
 
     /**
@@ -302,7 +317,7 @@ class Requirements implements Flushable
      */
     public static function includeInHTML($content)
     {
-        return self::backend()->includeInHTML($content);
+        return Requirements::backend()->includeInHTML($content);
     }
 
     /**
@@ -313,7 +328,7 @@ class Requirements implements Flushable
      */
     public static function include_in_response(HTTPResponse $response)
     {
-        self::backend()->includeInResponse($response);
+        Requirements::backend()->includeInResponse($response);
     }
 
     /**
@@ -330,7 +345,7 @@ class Requirements implements Flushable
      */
     public static function add_i18n_javascript($langDir, $return = false)
     {
-        return self::backend()->add_i18n_javascript($langDir, $return);
+        return Requirements::backend()->add_i18n_javascript($langDir, $return);
     }
 
     /**
@@ -384,7 +399,7 @@ class Requirements implements Flushable
         if (is_string($options)) {
             throw new InvalidArgumentException("Invalid $options");
         }
-        self::backend()->combineFiles($combinedFileName, $files, $options);
+        Requirements::backend()->combineFiles($combinedFileName, $files, $options);
     }
 
     /**
@@ -396,7 +411,7 @@ class Requirements implements Flushable
      */
     public static function get_combine_files()
     {
-        return self::backend()->getCombinedFiles();
+        return Requirements::backend()->getCombinedFiles();
     }
 
     /**
@@ -405,7 +420,7 @@ class Requirements implements Flushable
      */
     public static function delete_all_combined_files()
     {
-        self::backend()->deleteAllCombinedFiles();
+        Requirements::backend()->deleteAllCombinedFiles();
     }
 
     /**
@@ -413,7 +428,7 @@ class Requirements implements Flushable
      */
     public static function clear_combined_files()
     {
-        self::backend()->clearCombinedFiles();
+        Requirements::backend()->clearCombinedFiles();
     }
 
     /**
@@ -421,7 +436,7 @@ class Requirements implements Flushable
      */
     public static function process_combined_files()
     {
-        self::backend()->processCombinedFiles();
+        Requirements::backend()->processCombinedFiles();
     }
 
     /**
@@ -432,7 +447,7 @@ class Requirements implements Flushable
      */
     public static function get_write_js_to_body()
     {
-        return self::backend()->getWriteJavascriptToBody();
+        return Requirements::backend()->getWriteJavascriptToBody();
     }
 
     /**
@@ -443,7 +458,7 @@ class Requirements implements Flushable
      */
     public static function set_write_js_to_body($var)
     {
-        self::backend()->setWriteJavascriptToBody($var);
+        Requirements::backend()->setWriteJavascriptToBody($var);
     }
 
     /**
@@ -454,7 +469,7 @@ class Requirements implements Flushable
      */
     public static function get_force_js_to_bottom()
     {
-        return self::backend()->getForceJSToBottom();
+        return Requirements::backend()->getForceJSToBottom();
     }
 
     /**
@@ -465,7 +480,7 @@ class Requirements implements Flushable
      */
     public static function set_force_js_to_bottom($var)
     {
-        self::backend()->setForceJSToBottom($var);
+        Requirements::backend()->setForceJSToBottom($var);
     }
 
     /**
@@ -475,7 +490,7 @@ class Requirements implements Flushable
      */
     public static function get_minify_combined_js_files()
     {
-        return self::backend()->getMinifyCombinedJSFiles();
+        return Requirements::backend()->getMinifyCombinedJSFiles();
     }
 
     /**
@@ -485,7 +500,7 @@ class Requirements implements Flushable
      */
     public static function set_minify_combined_js_files($minify)
     {
-        self::backend()->setMinifyCombinedJSFiles($minify);
+        Requirements::backend()->setMinifyCombinedJSFiles($minify);
     }
 
     /**
@@ -495,7 +510,7 @@ class Requirements implements Flushable
      */
     public static function get_write_header_comments()
     {
-        return self::backend()->getWriteHeaderComment();
+        return Requirements::backend()->getWriteHeaderComment();
     }
 
     /**
@@ -505,7 +520,7 @@ class Requirements implements Flushable
      */
     public function set_write_header_comments($write)
     {
-        self::backend()->setWriteHeaderComment($write);
+        Requirements::backend()->setWriteHeaderComment($write);
     }
 
 
@@ -514,6 +529,6 @@ class Requirements implements Flushable
      */
     public static function debug()
     {
-        self::backend()->debug();
+        Requirements::backend()->debug();
     }
 }

@@ -33,6 +33,13 @@ use SilverStripe\Security\RandomGenerator;
 use SilverStripe\Security\SecurityToken;
 use SilverStripe\View\ArrayData;
 use SilverStripe\View\SSViewer;
+use SilverStripe\Forms\GridField\GridFieldDetailForm;
+use SilverStripe\Forms\GridField\GridFieldDetailForm_ItemRequest;
+use SilverStripe\Security\MemberAuthenticator\LostPasswordHandler;
+use SilverStripe\Core\Injector\Injector;
+use SilverStripe\Forms\SudoModePasswordField;
+use SilverStripe\Security\SudoMode\SudoModeServiceInterface;
+use SilverStripe\Forms\ReadonlyField;
 
 class FormTest extends FunctionalTest
 {
@@ -404,7 +411,7 @@ class FormTest extends FunctionalTest
         $form->saveInto($object);
         $playersIds = $object->Players()->getIDList();
 
-        $this->assertTrue($form->validationResult()->isValid());
+        $this->assertTrue($form->validate()->isValid());
         $this->assertEquals(
             $playersIds,
             [],
@@ -1261,6 +1268,47 @@ class FormTest extends FunctionalTest
             $this->mainSession->session()->get('FormInfo.Form_Form'),
             'Our form was reloaded successfully. That should have cleared our session.'
         );
+    }
+
+    public static function provideRequireSudoMode(): array
+    {
+        return [
+            'sudo-protected' => [
+                'class' => GridFieldDetailForm_ItemRequest::class,
+                'expected' => true,
+            ],
+            'not-sudo-protected' => [
+                'class' => LostPasswordHandler::class,
+                'expected' => false,
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideRequireSudoMode
+     */
+    public function testRequireSudoMode(string $class, bool $expected): void
+    {
+        $request = Controller::curr()->getRequest();
+        if ($class === GridFieldDetailForm_ItemRequest::class) {
+            $handler = new GridFieldDetailForm_ItemRequest(null, null, null, null, null);
+        } elseif ($class === LostPasswordHandler::class) {
+            $handler = new LostPasswordHandler('');
+        }
+        $handler->setRequest($request);
+        $form = new Form($handler, 'MyForm', new FieldList(new TextField('MyTextField')));
+        $form->requireSudoMode();
+        $fieldList = $form->Fields();
+        $last = $fieldList->last();
+        $this->assertSame('MyTextField', $last->getName());
+        if ($expected) {
+            $this->assertSame(2, $fieldList->count());
+            $this->assertSame(SudoModePasswordField::class, get_class($fieldList->first()));
+            $this->assertSame(ReadonlyField::class, get_class($last));
+        } else {
+            $this->assertSame(1, $fieldList->count());
+            $this->assertSame(TextField::class, get_class($last));
+        }
     }
 
     protected function getStubForm()

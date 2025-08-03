@@ -4,6 +4,7 @@ namespace SilverStripe\Security;
 
 use IntlDateFormatter;
 use InvalidArgumentException;
+use Psr\Log\LoggerInterface;
 use SilverStripe\Admin\LeftAndMain;
 use SilverStripe\CMS\Controllers\CMSMain;
 use SilverStripe\Control\Director;
@@ -14,6 +15,7 @@ use SilverStripe\Core\Convert;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\TestMailer;
 use SilverStripe\Forms\CheckboxField;
+use SilverStripe\Forms\CompositeValidator;
 use SilverStripe\Forms\ConfirmedPasswordField;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
@@ -34,15 +36,16 @@ use SilverStripe\ORM\SS_List;
 use SilverStripe\ORM\UnsavedRelationList;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\ORM\ValidationResult;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Exception\RfcComplianceException;
 use Closure;
 use RuntimeException;
+use SilverStripe\Dev\Deprecation;
 
 /**
  * The member class which represents the users of the system
  *
- * @method HasManyList LoggedPasswords()
- * @method HasManyList RememberLoginHashes()
  * @property string $FirstName
  * @property string $Surname
  * @property string $Email
@@ -59,6 +62,8 @@ use RuntimeException;
  * @property int $FailedLoginCount
  * @property string $DateFormat
  * @property string $TimeFormat
+ * @method HasManyList<MemberPassword> LoggedPasswords()
+ * @method HasManyList<RememberLoginHash> RememberLoginHashes()
  */
 class Member extends DataObject
 {
@@ -102,6 +107,8 @@ class Member extends DataObject
         //Removed due to duplicate null values causing MSSQL problems
         //'AutoLoginHash' => Array('type'=>'unique', 'value'=>'AutoLoginHash', 'ignoreNulls'=>true)
     ];
+
+    private static bool $require_sudo_mode = true;
 
     /**
      * @config
@@ -388,12 +395,12 @@ class Member extends DataObject
     /**
      * Returns the default {@link PasswordValidator}
      *
-     * @return PasswordValidator
+     * @return PasswordValidator|null
      */
     public static function password_validator()
     {
         if (Injector::inst()->has(PasswordValidator::class)) {
-            return Injector::inst()->get(PasswordValidator::class);
+            return Deprecation::withSuppressedNotice(fn() => Injector::inst()->get(PasswordValidator::class));
         }
         return null;
     }
@@ -475,7 +482,7 @@ class Member extends DataObject
     public function regenerateTempID()
     {
         $generator = new RandomGenerator();
-        $lifetime = self::config()->get('temp_id_lifetime');
+        $lifetime = static::config()->get('temp_id_lifetime');
         $this->TempIDHash = $generator->randomToken('sha1');
         $this->TempIDExpired = $lifetime
             ? date('Y-m-d H:i:s', strtotime(DBDatetime::now()->getValue()) + $lifetime)
@@ -518,13 +525,11 @@ class Member extends DataObject
 
         // If the algorithm or salt is not available, it means we are operating
         // on legacy account with unhashed password. Do not hash the string.
-        if (!$this->PasswordEncryption) {
+        if (!$this->PasswordEncryption || !$this->Salt) {
             return $string;
         }
 
-        // We assume we have PasswordEncryption and Salt available here.
         $e = PasswordEncryptor::create_for_algorithm($this->PasswordEncryption);
-
         return $e->encrypt($string, $this->Salt);
     }
 
@@ -564,7 +569,7 @@ class Member extends DataObject
     public function validateAutoLoginToken($autologinToken)
     {
         $hash = $this->encryptWithUserSettings($autologinToken);
-        $member = self::member_from_autologinhash($hash, false);
+        $member = Member::member_from_autologinhash($hash, false);
 
         return (bool)$member;
     }
@@ -575,12 +580,10 @@ class Member extends DataObject
      * @param string $hash The hash key
      * @param bool $login Should the member be logged in?
      *
-     * @return Member the matching member, if valid
-     * @return Member
+     * @return Member|null the matching member, if valid or null
      */
     public static function member_from_autologinhash($hash, $login = false)
     {
-        /** @var Member $member */
         $member = static::get()->filter([
             'AutoLoginHash' => $hash,
             'AutoLoginExpired:GreaterThan' => DBDatetime::now()->getValue(),
@@ -597,7 +600,7 @@ class Member extends DataObject
      * Find a member record with the given TempIDHash value
      *
      * @param string $tempid
-     * @return Member
+     * @return Member|null the matching member, if valid or null
      */
     public static function member_from_tempid($tempid)
     {
@@ -606,7 +609,6 @@ class Member extends DataObject
 
         // Exclude expired
         if (static::config()->get('temp_id_lifetime')) {
-            /** @var DataList|Member[] $members */
             $members = $members->filter('TempIDExpired:GreaterThan', DBDatetime::now()->getValue());
         }
 
@@ -653,7 +655,6 @@ class Member extends DataObject
         $label = $editingPassword
             ? _t(__CLASS__ . '.EDIT_PASSWORD', 'New Password')
             : $this->fieldLabel('Password');
-        /** @var ConfirmedPasswordField $password */
         $password = ConfirmedPasswordField::create(
             'Password',
             $label,
@@ -699,6 +700,20 @@ class Member extends DataObject
         return $validator;
     }
 
+    public function getCMSCompositeValidator(): CompositeValidator
+    {
+        // Add the member validator before extension point, so it's much easier to customise this
+        // via an extension
+        $this->beforeExtending(
+            'updateCMSCompositeValidator',
+            function (CompositeValidator $compositeValidator): void {
+                $memberValidator = $this->getValidator();
+                $compositeValidator->addValidator($memberValidator);
+            }
+        );
+
+        return parent::getCMSCompositeValidator();
+    }
 
     /**
      * Temporarily act as the specified user, limited to a $callback, but
@@ -780,18 +795,24 @@ class Member extends DataObject
             && static::config()->get('notify_password_change')
             && $this->isInDB()
         ) {
-            $email = Email::create()
-                ->setHTMLTemplate('SilverStripe\\Control\\Email\\ChangePasswordEmail')
-                ->setData($this)
-                ->setTo($this->Email)
-                ->setSubject(_t(
-                    __CLASS__ . '.SUBJECTPASSWORDCHANGED',
-                    "Your password has been changed",
-                    'Email subject'
-                ));
+            try {
+                $email = Email::create()
+                    ->setHTMLTemplate('SilverStripe\\Control\\Email\\ChangePasswordEmail')
+                    ->setData($this)
+                    ->setTo($this->Email)
+                    ->setSubject(_t(
+                        __CLASS__ . '.SUBJECTPASSWORDCHANGED',
+                        "Your password has been changed",
+                        'Email subject'
+                    ));
 
-            $this->extend('updateChangedPasswordEmail', $email);
-            $email->send();
+                $this->extend('updateChangedPasswordEmail', $email);
+                $email->send();
+            } catch (TransportExceptionInterface | RfcComplianceException $e) {
+                /** @var LoggerInterface $logger */
+                $logger = Injector::inst()->get(LoggerInterface::class);
+                $logger->error('Error sending email in ' . __FILE__ . ' line ' . __LINE__ . ": {$e->getMessage()}");
+            }
         }
 
         // The test on $this->ID is used for when records are initially created. Note that this only works with
@@ -1166,7 +1187,7 @@ class Member extends DataObject
     }
 
     /**
-     * @return ManyManyList|UnsavedRelationList
+     * @return ManyManyList<Group>|UnsavedRelationList<Group>
      */
     public function DirectGroups()
     {
@@ -1202,7 +1223,6 @@ class Member extends DataObject
 
         $membersList = new ArrayList();
         // This is a bit ineffective, but follow the ORM style
-        /** @var Group $group */
         foreach (Group::get()->byIDs($groupIDList) as $group) {
             $membersList->merge($group->Members());
         }
@@ -1322,7 +1342,6 @@ class Member extends DataObject
             $rootTabSet = $fields->fieldByName("Root");
             /** @var Tab $mainTab */
             $mainTab = $rootTabSet->fieldByName("Main");
-            /** @var FieldList $mainFields */
             $mainFields = $mainTab->getChildren();
 
             // Build change password field
@@ -1614,7 +1633,7 @@ class Member extends DataObject
     protected function encryptPassword()
     {
         // reset salt so that it gets regenerated - this will invalidate any persistent login cookies
-        // or other information encrypted with this Member's settings (see self::encryptWithUserSettings)
+        // or other information encrypted with this Member's settings (see Member::encryptWithUserSettings)
         $this->Salt = '';
 
         // Password was changed: encrypt the password according the settings
@@ -1649,13 +1668,13 @@ class Member extends DataObject
      */
     public function registerFailedLogin()
     {
-        $lockOutAfterCount = self::config()->get('lock_out_after_incorrect_logins');
+        $lockOutAfterCount = static::config()->get('lock_out_after_incorrect_logins');
         if ($lockOutAfterCount) {
             // Keep a tally of the number of failed log-ins so that we can lock people out
             ++$this->FailedLoginCount;
 
             if ($this->FailedLoginCount >= $lockOutAfterCount) {
-                $lockoutMins = self::config()->get('lock_out_delay_mins');
+                $lockoutMins = static::config()->get('lock_out_delay_mins');
                 $this->LockedOutUntil = date('Y-m-d H:i:s', DBDatetime::now()->getTimestamp() + $lockoutMins * 60);
                 $this->FailedLoginCount = 0;
             }
@@ -1669,7 +1688,7 @@ class Member extends DataObject
      */
     public function registerSuccessfulLogin()
     {
-        if (self::config()->get('lock_out_after_incorrect_logins')) {
+        if (static::config()->get('lock_out_after_incorrect_logins')) {
             // Forgive all past login failures
             $this->FailedLoginCount = 0;
             $this->LockedOutUntil = null;
@@ -1688,6 +1707,16 @@ class Member extends DataObject
     {
         $currentName = '';
         $currentPriority = 0;
+
+        // If we don't have a custom config, no need to look in all groups
+        $editorConfigMap = HTMLEditorConfig::get_available_configs_map();
+        $editorConfigCount = count($editorConfigMap);
+        if ($editorConfigCount === 0) {
+            return 'cms';
+        }
+        if ($editorConfigCount === 1) {
+            return key($editorConfigMap);
+        }
 
         foreach ($this->Groups() as $group) {
             $configName = $group->HtmlEditorConfig;
@@ -1713,7 +1742,7 @@ class Member extends DataObject
     public function generateRandomPassword(int $length = 0): string
     {
         $password = '';
-        $validator = self::password_validator();
+        $validator = Member::password_validator();
         if ($length && $validator && $length < $validator->getMinLength()) {
             throw new InvalidArgumentException('length argument is less than password validator minLength');
         }

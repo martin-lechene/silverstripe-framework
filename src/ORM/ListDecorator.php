@@ -4,28 +4,46 @@ namespace SilverStripe\ORM;
 
 use SilverStripe\View\ViewableData;
 use LogicException;
+use SilverStripe\Dev\Deprecation;
 use Traversable;
 
 /**
  * A base class for decorators that wrap around a list to provide additional
  * functionality. It passes through list methods to the underlying list
  * implementation.
+ *
+ * @template TList of SS_List&Sortable&Filterable&Limitable
+ * @template T
+ * @implements SS_List<T>
+ * @implements Sortable<T>
+ * @implements Filterable<T>
+ * @implements Limitable<T>
+ * @deprecated 5.4.0 Will be renamed to SilverStripe\Model\List\ListDecorator
  */
 abstract class ListDecorator extends ViewableData implements SS_List, Sortable, Filterable, Limitable
 {
-
     /**
-     * @var SS_List
+     * @var TList<T>
      */
     protected SS_List&Sortable&Filterable&Limitable $list;
 
+    /**
+     * @param TList<T> $list
+     */
     public function __construct(SS_List&Sortable&Filterable&Limitable $list)
     {
+        Deprecation::withSuppressedNotice(function () {
+            Deprecation::notice('5.4.0', 'Will be renamed to SilverStripe\Model\List\ListDecorator', Deprecation::SCOPE_CLASS);
+        });
+
         $this->setList($list);
 
         parent::__construct();
     }
 
+    /**
+     * @return TList<T>
+     */
     public function getList(): SS_List&Sortable&Filterable&Limitable
     {
         return $this->list;
@@ -37,9 +55,12 @@ abstract class ListDecorator extends ViewableData implements SS_List, Sortable, 
      * Useful for keeping a decorator/paginated list configuration intact while modifying
      * the underlying list.
      *
-     * @return SS_List
+     * @template TListA
+     * @template TA
+     * @param TListA<TA> $list
+     * @return static<TListA, TA>
      */
-    public function setList(SS_List&Sortable&Filterable&Limitable $list): self
+    public function setList(SS_List&Sortable&Filterable&Limitable $list): ListDecorator
     {
         $this->list = $list;
         $this->failover = $this->list;
@@ -51,6 +72,9 @@ abstract class ListDecorator extends ViewableData implements SS_List, Sortable, 
         return $this->list->offsetExists($key);
     }
 
+    /**
+     * @return T
+     */
     public function offsetGet(mixed $key): mixed
     {
         return $this->list->offsetGet($key);
@@ -86,6 +110,9 @@ abstract class ListDecorator extends ViewableData implements SS_List, Sortable, 
         $this->list->remove($itemObject);
     }
 
+    /**
+     * @return Traversable<T>
+     */
     public function getIterator(): Traversable
     {
         return $this->list->getIterator();
@@ -106,9 +133,19 @@ abstract class ListDecorator extends ViewableData implements SS_List, Sortable, 
         return $this->list->last();
     }
 
-    public function TotalItems()
+    public function getTotalItems()
     {
         return $this->list->count();
+    }
+
+    /**
+     * @return int
+     * @depreated 5.4.0 Use getTotalItems() instead.
+     */
+    public function TotalItems()
+    {
+        Deprecation::notice('5.4.0', 'Use getTotalItems() instead.');
+        return $this->getTotalItems();
     }
 
     public function Count(): int
@@ -141,6 +178,9 @@ abstract class ListDecorator extends ViewableData implements SS_List, Sortable, 
         return $this->list->columnUnique($value);
     }
 
+    /**
+     * @return TList<T>
+     */
     public function each($callback)
     {
         return $this->list->each($callback);
@@ -164,6 +204,8 @@ abstract class ListDecorator extends ViewableData implements SS_List, Sortable, 
      * @example $list->sort('Name DESC'); // DESC sorting
      * @example $list->sort('Name', 'ASC');
      * @example $list->sort(array('Name'=>'ASC,'Age'=>'DESC'));
+     *
+     * @return TList<T>
      */
     public function sort()
     {
@@ -182,6 +224,8 @@ abstract class ListDecorator extends ViewableData implements SS_List, Sortable, 
      * @example $list->filter('Name', array('aziz', 'bob'); // aziz and bob in list
      * @example $list->filter(array('Name'=>'bob, 'Age'=>21)); // bob or someone with Age 21
      * @example $list->filter(array('Name'=>'bob, 'Age'=>array(21, 43))); // bob or anyone with Age 21 or 43
+     *
+     * @return TList<T>
      */
     public function filter()
     {
@@ -208,7 +252,8 @@ abstract class ListDecorator extends ViewableData implements SS_List, Sortable, 
      *          // SQL: WHERE (("Name" IN ('bob', 'phil')) OR ("Age" IN ('21', '43'))
      *
      * @param string|array See {@link filter()}
-     * @return DataList
+     *
+     * @return TList<T>
      */
     public function filterAny()
     {
@@ -222,7 +267,7 @@ abstract class ListDecorator extends ViewableData implements SS_List, Sortable, 
      *
      * @example $list = $list->filterByCallback(function($item, $list) { return $item->Age == 9; })
      * @param callable $callback
-     * @return ArrayList (this may change in future implementations)
+     * @return ArrayList<T>
      */
     public function filterByCallback($callback)
     {
@@ -241,17 +286,14 @@ abstract class ListDecorator extends ViewableData implements SS_List, Sortable, 
         return $output;
     }
 
+    /**
+     * @return TList<T>
+     */
     public function limit(?int $length, int $offset = 0): SS_List&Sortable&Filterable&Limitable
     {
         return $this->list->limit($length, $offset);
     }
 
-    /**
-     * Return the first item with the given ID
-     *
-     * @param int $id
-     * @return mixed
-     */
     public function byID($id)
     {
         return $this->list->byID($id);
@@ -261,7 +303,8 @@ abstract class ListDecorator extends ViewableData implements SS_List, Sortable, 
      * Filter this list to only contain the given Primary IDs
      *
      * @param array $ids Array of integers
-     * @return SS_List
+     *
+     * @return TList<T>
      */
     public function byIDs($ids)
     {
@@ -275,6 +318,8 @@ abstract class ListDecorator extends ViewableData implements SS_List, Sortable, 
      * @example $list->exclude('Name', array('aziz', 'bob'); // exclude aziz and bob from list
      * @example $list->exclude(array('Name'=>'bob, 'Age'=>21)); // exclude bob or someone with Age 21
      * @example $list->exclude(array('Name'=>'bob, 'Age'=>array(21, 43))); // exclude bob or anyone with Age 21 or 43
+     *
+     * @return TList<T>
      */
     public function exclude()
     {

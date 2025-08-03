@@ -29,7 +29,14 @@ class FormScaffolder
     public $tabbed = false;
 
     /**
+     * Only set up the "Root.Main" tab, but skip scaffolding actual FormFields.
+     * If $tabbed is false, an empty FieldList will be returned.
+     */
+    public bool $mainTabOnly = false;
+
+    /**
      * @var boolean $ajaxSafe
+     * @deprecated 5.3.0 Will be removed without equivalent functionality in a future major release.
      */
     public $ajaxSafe = false;
 
@@ -40,15 +47,31 @@ class FormScaffolder
     public $restrictFields;
 
     /**
+     * Numeric array of field names and has_one relations to explicitly not scaffold.
+     */
+    public array $ignoreFields = [];
+
+    /**
      * @var array $fieldClasses Optional mapping of fieldnames to subclasses of {@link FormField}.
      * By default the scaffolder will determine the field instance by {@link DBField::scaffoldFormField()}.
      */
     public $fieldClasses;
 
     /**
-     * @var boolean $includeRelations Include has_one, has_many and many_many relations
+     * @var boolean $includeRelations Include has_many and many_many relations
      */
     public $includeRelations = false;
+
+    /**
+     * Array of relation names to use as an allow list.
+     * If left blank, all has_many and many_many relations will be scaffolded unless explicitly ignored.
+     */
+    public array $restrictRelations = [];
+
+    /**
+     * Numeric array of has_many and many_many relations to explicitly not scaffold.
+     */
+    public array $ignoreRelations = [];
 
     /**
      * @param DataObject $obj
@@ -76,10 +99,18 @@ class FormScaffolder
             $mainTab->setTitle(_t(__CLASS__ . '.TABMAIN', 'Main'));
         }
 
+        if ($this->mainTabOnly) {
+            return $fields;
+        }
+
         // Add logical fields directly specified in db config
         foreach ($this->obj->config()->get('db') as $fieldName => $fieldType) {
-            // Skip restricted fields
+            // Skip fields that aren't in the allow list
             if ($this->restrictFields && !in_array($fieldName, $this->restrictFields ?? [])) {
+                continue;
+            }
+            // Skip ignored fields
+            if (in_array($fieldName, $this->ignoreFields)) {
                 continue;
             }
 
@@ -110,6 +141,9 @@ class FormScaffolder
                 if ($this->restrictFields && !in_array($relationship, $this->restrictFields ?? [])) {
                     continue;
                 }
+                if (in_array($relationship, $this->ignoreFields)) {
+                    continue;
+                }
                 $fieldName = $component === 'SilverStripe\\ORM\\DataObject'
                     ? $relationship // Polymorphic has_one field is composite, so don't refer to ID subfield
                     : "{$relationship}ID";
@@ -138,27 +172,43 @@ class FormScaffolder
                 && ($this->includeRelations === true || isset($this->includeRelations['has_many']))
             ) {
                 foreach ($this->obj->hasMany() as $relationship => $component) {
-                    if ($this->tabbed) {
-                        $fields->findOrMakeTab(
-                            "Root.$relationship",
-                            $this->obj->fieldLabel($relationship)
-                        );
+                    if (!empty($this->restrictRelations) && !in_array($relationship, $this->restrictRelations)) {
+                        continue;
                     }
+                    if (in_array($relationship, $this->ignoreRelations)) {
+                        continue;
+                    }
+                    $includeInOwnTab = true;
+                    $fieldLabel = $this->obj->fieldLabel($relationship);
                     $fieldClass = (isset($this->fieldClasses[$relationship]))
                         ? $this->fieldClasses[$relationship]
-                        : 'SilverStripe\\Forms\\GridField\\GridField';
-                    /** @var GridField $grid */
-                    $grid = Injector::inst()->create(
-                        $fieldClass,
-                        $relationship,
-                        $this->obj->fieldLabel($relationship),
-                        $this->obj->$relationship(),
-                        GridFieldConfig_RelationEditor::create()
-                    );
-                    if ($this->tabbed) {
-                        $fields->addFieldToTab("Root.$relationship", $grid);
+                        : null;
+                    if ($fieldClass) {
+                        /** @var GridField */
+                        $hasManyField = Injector::inst()->create(
+                            $fieldClass,
+                            $relationship,
+                            $fieldLabel,
+                            $this->obj->$relationship(),
+                            GridFieldConfig_RelationEditor::create()
+                        );
                     } else {
-                        $fields->push($grid);
+                        /** @var DataObject */
+                        $hasManySingleton = singleton($component);
+                        $hasManyField = $hasManySingleton->scaffoldFormFieldForHasMany($relationship, $fieldLabel, $this->obj, $includeInOwnTab);
+                    }
+                    if ($this->tabbed) {
+                        if ($includeInOwnTab) {
+                            $fields->findOrMakeTab(
+                                "Root.$relationship",
+                                $fieldLabel
+                            );
+                            $fields->addFieldToTab("Root.$relationship", $hasManyField);
+                        } else {
+                            $fields->addFieldToTab('Root.Main', $hasManyField);
+                        }
+                    } else {
+                        $fields->push($hasManyField);
                     }
                 }
             }
@@ -167,6 +217,12 @@ class FormScaffolder
                 && ($this->includeRelations === true || isset($this->includeRelations['many_many']))
             ) {
                 foreach ($this->obj->manyMany() as $relationship => $component) {
+                    if (!empty($this->restrictRelations) && !in_array($relationship, $this->restrictRelations)) {
+                        continue;
+                    }
+                    if (in_array($relationship, $this->ignoreRelations)) {
+                        continue;
+                    }
                     static::addManyManyRelationshipFields(
                         $fields,
                         $relationship,
@@ -187,7 +243,7 @@ class FormScaffolder
      *
      * @param FieldList $fields Reference to the @FieldList to add fields to.
      * @param string $relationship The relationship identifier.
-     * @param mixed $overrideFieldClass Specify the field class to use here or leave as null to use default.
+     * @param string|null $overrideFieldClass Specify the field class to use here or leave as null to use default.
      * @param bool $tabbed Whether this relationship has it's own tab or not.
      * @param DataObject $dataObject The @DataObject that has the relation.
      */
@@ -198,28 +254,37 @@ class FormScaffolder
         $tabbed,
         DataObject $dataObject
     ) {
-        if ($tabbed) {
-            $fields->findOrMakeTab(
-                "Root.$relationship",
-                $dataObject->fieldLabel($relationship)
+        $includeInOwnTab = true;
+        $fieldLabel = $dataObject->fieldLabel($relationship);
+
+        if ($overrideFieldClass) {
+            /** @var GridField */
+            $manyManyField = Injector::inst()->create(
+                $overrideFieldClass,
+                $relationship,
+                $fieldLabel,
+                $dataObject->$relationship(),
+                GridFieldConfig_RelationEditor::create()
             );
+        } else {
+            $manyManyComponent = DataObject::getSchema()->manyManyComponent(get_class($dataObject), $relationship);
+            /** @var DataObject */
+            $manyManySingleton = singleton($manyManyComponent['childClass']);
+            $manyManyField = $manyManySingleton->scaffoldFormFieldForManyMany($relationship, $fieldLabel, $dataObject, $includeInOwnTab);
         }
 
-        $fieldClass = $overrideFieldClass ?: GridField::class;
-
-        /** @var GridField $grid */
-        $grid = Injector::inst()->create(
-            $fieldClass,
-            $relationship,
-            $dataObject->fieldLabel($relationship),
-            $dataObject->$relationship(),
-            GridFieldConfig_RelationEditor::create()
-        );
-
         if ($tabbed) {
-            $fields->addFieldToTab("Root.$relationship", $grid);
+            if ($includeInOwnTab) {
+                $fields->findOrMakeTab(
+                    "Root.$relationship",
+                    $fieldLabel
+                );
+                $fields->addFieldToTab("Root.$relationship", $manyManyField);
+            } else {
+                $fields->addFieldToTab('Root.Main', $manyManyField);
+            }
         } else {
-            $fields->push($grid);
+            $fields->push($manyManyField);
         }
     }
 
@@ -233,8 +298,12 @@ class FormScaffolder
     {
         return [
             'tabbed' => $this->tabbed,
+            'mainTabOnly' => $this->mainTabOnly,
             'includeRelations' => $this->includeRelations,
+            'restrictRelations' => $this->restrictRelations,
+            'ignoreRelations' => $this->ignoreRelations,
             'restrictFields' => $this->restrictFields,
+            'ignoreFields' => $this->ignoreFields,
             'fieldClasses' => $this->fieldClasses,
             'ajaxSafe' => $this->ajaxSafe
         ];

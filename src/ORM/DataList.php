@@ -35,6 +35,12 @@ use SilverStripe\ORM\Filters\SearchFilterable;
  *   - removeAll
  *
  * Subclasses of DataList may add other methods that have the same effect.
+ *
+ * @template T of DataObject
+ * @implements SS_List<T>
+ * @implements Filterable<T>
+ * @implements Sortable<T>
+ * @implements Limitable<T>
  */
 class DataList extends ViewableData implements SS_List, Filterable, Sortable, Limitable
 {
@@ -49,7 +55,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
     /**
      * The DataObject class name that this data list is querying
      *
-     * @var string
+     * @var class-string<T>
      */
     protected $dataClass;
 
@@ -63,7 +69,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
     /**
      * A cached Query to save repeated database calls. {@see DataList::getTemplateIteratorCount()}
      *
-     * @var SilverStripe\ORM\Connect\Query
+     * @var Query
      */
     protected $finalisedQuery;
 
@@ -89,7 +95,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * Create a new DataList.
      * No querying is done on construction, but the initial query schema is set up.
      *
-     * @param string $dataClass - The DataObject class to query.
+     * @param class-string<T> $dataClass - The DataObject class to query.
      */
     public function __construct($dataClass)
     {
@@ -102,7 +108,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
     /**
      * Get the dataClass name for this DataList, ie the DataObject ClassName
      *
-     * @return string
+     * @return class-string<T>
      */
     public function dataClass()
     {
@@ -150,7 +156,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * alterDataQuery
      *
      * @param callable $callback
-     * @return static
+     * @return static<T>
      * @throws Exception
      */
     public function alterDataQuery($callback)
@@ -187,12 +193,13 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * Return a new DataList instance with the underlying {@link DataQuery} object changed
      *
      * @param DataQuery $dataQuery
-     * @return static
+     * @return static<T>
      */
     public function setDataQuery(DataQuery $dataQuery)
     {
         $clone = clone $this;
         $clone->dataQuery = $dataQuery;
+        $clone->dataClass = $dataQuery->dataClass();
         return $clone;
     }
 
@@ -201,7 +208,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      *
      * @param string|array $keyOrArray Either the single key to set, or an array of key value pairs to set
      * @param mixed $val If $keyOrArray is not an array, this is the value to set
-     * @return static
+     * @return static<T>
      */
     public function setDataQueryParam($keyOrArray, $val = null)
     {
@@ -242,7 +249,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      *
      * @param string|array|SQLConditionGroup $filter Predicate(s) to set, as escaped SQL statements or
      * paramaterised queries
-     * @return static
+     * @return static<T>
      */
     public function where($filter)
     {
@@ -264,7 +271,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      *
      * @param string|array|SQLConditionGroup $filter Predicate(s) to set, as escaped SQL statements or
      * paramaterised queries
-     * @return static
+     * @return static<T>
      */
     public function whereAny($filter)
     {
@@ -316,6 +323,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
     /**
      * Return a new DataList instance with the records returned in this query
      * restricted by a limit clause.
+     * @return static<T>
      */
     public function limit(?int $length, int $offset = 0): static
     {
@@ -336,7 +344,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * Return a new DataList instance with distinct records or not
      *
      * @param bool $value
-     * @return static
+     * @return static<T>
      */
     public function distinct($value)
     {
@@ -350,7 +358,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      *
      * Raw SQL is not accepted, only actual field names can be passed
      *
-     * @param string|array $args
+     * @param string|array|null $args
      * @example $list = $list->sort('Name'); // default ASC sorting
      * @example $list = $list->sort('"Name"'); // field names can have double quotes around them
      * @example $list = $list->sort('Name ASC, Age DESC');
@@ -358,6 +366,8 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * @example $list = $list->sort(['Name' => 'ASC', 'Age' => 'DESC']);
      * @example $list = $list->sort('MyRelation.MyColumn ASC')
      * @example $list->sort(null); // wipe any existing sort
+     *
+     * @return static<T>
      */
     public function sort(...$args): static
     {
@@ -446,6 +456,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      *
      * This method accepts raw SQL so could be vulnerable to SQL injection attacks if used incorrectly,
      * it's preferable to use sort() instead which does not allow raw SQL
+     * @return static<T>
      */
     public function orderBy(string $orderBy): static
     {
@@ -473,7 +484,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * ->filter('Field:not', null) will generate '"Field" IS NOT NULL'
      *
      * @param string|array Escaped SQL statement. If passed as array, all keys and values will be escaped internally
-     * @return $this
+     * @return static<T>
      */
     public function filter()
     {
@@ -499,7 +510,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * Return a new instance of the list with an added filter
      *
      * @param array $filterArray
-     * @return $this
+     * @return static<T>
      */
     public function addFilter($filterArray)
     {
@@ -535,7 +546,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      *          // SQL: WHERE (("Name" IN ('bob', 'phil')) OR ("Age" IN ('21', '43'))
      *
      * @param string|array See {@link filter()}
-     * @return static
+     * @return static<T>
      */
     public function filterAny()
     {
@@ -580,7 +591,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      *
      * @example $list = $list->filterByCallback(function($item, $list) { return $item->Age == 9; })
      * @param callable $callback
-     * @return ArrayList (this may change in future implementations)
+     * @return ArrayList<T>
      */
     public function filterByCallback($callback)
     {
@@ -590,7 +601,6 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
                 gettype($callback)
             ));
         }
-        /** @var ArrayList $output */
         $output = ArrayList::create();
         foreach ($this as $item) {
             if (call_user_func($callback, $item, $this)) {
@@ -620,7 +630,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * @param string $columnName Quoted column name (by reference)
      * @param bool $linearOnly Set to true to restrict to linear relations only. Set this
      * if this relation will be used for sorting, and should not include duplicate rows.
-     * @return $this DataList with this relation applied
+     * @return static<T> DataList with this relation applied
      */
     public function applyRelation($field, &$columnName = null, $linearOnly = false)
     {
@@ -677,8 +687,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      *
      * @param string|array
      * @param string [optional]
-     *
-     * @return $this
+     * @return static<T>
      */
     public function exclude()
     {
@@ -718,7 +727,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * @param string|array
      * @param string [optional]
      *
-     * @return $this
+     * @return static<T>
      */
     public function excludeAny()
     {
@@ -747,8 +756,8 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      *
      * The $list passed needs to contain the same dataclass as $this
      *
-     * @param DataList $list
-     * @return static
+     * @param DataList<DataObject> $list
+     * @return static<T>
      * @throws InvalidArgumentException
      */
     public function subtract(DataList $list)
@@ -772,7 +781,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * will cause the query to appear first. The default is 20, and joins created automatically by the
      * ORM have a value of 10.
      * @param array $parameters Any additional parameters if the join is a parameterised subquery
-     * @return static
+     * @return static<T>
      */
     public function innerJoin($table, $onClause, $alias = null, $order = 20, $parameters = [])
     {
@@ -791,7 +800,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * will cause the query to appear first. The default is 20, and joins created automatically by the
      * ORM have a value of 10.
      * @param array $parameters Any additional parameters if the join is a parameterised subquery
-     * @return static
+     * @return static<T>
      */
     public function leftJoin($table, $onClause, $alias = null, $order = 20, $parameters = [])
     {
@@ -810,7 +819,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * will cause the query to appear first. The default is 20, and joins created automatically by the
      * ORM have a value of 10.
      * @param array $parameters Any additional parameters if the join is a parameterised subquery
-     * @return static
+     * @return static<T>
      */
     public function rightJoin($table, $onClause, $alias = null, $order = 20, $parameters = [])
     {
@@ -822,8 +831,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
     /**
      * Return an array of the actual items that this DataList contains at this stage.
      * This is when the query is actually executed.
-     *
-     * @return array
+     * @return array<T>
      */
     public function toArray()
     {
@@ -852,12 +860,6 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
         return $result;
     }
 
-    /**
-     * Walks the list using the specified callback
-     *
-     * @param callable $callback
-     * @return $this
-     */
     public function each($callback)
     {
         foreach ($this as $row) {
@@ -894,7 +896,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * If called without $row['ID'] set, then a new object will be created rather than rehydrated.
      *
      * @param array $row
-     * @return DataObject
+     * @return T
      */
     public function createDataObject($row)
     {
@@ -946,6 +948,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
     /**
      * Returns an Iterator for this DataList.
      * This function allows you to use DataLists in foreach loops
+     * @return Traversable<T>
      */
     public function getIterator(): Traversable
     {
@@ -984,7 +987,10 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
             return [
                 $hasOneComponent,
                 'has_one',
-                $relationName . 'ID',
+                [
+                    'joinField' => $relationName . 'ID',
+                    'joinClass' => $hasOneComponent == DataObject::class ? $relationName . 'Class' : null,
+                ],
             ];
         }
         $belongsToComponent = $schema->belongsToComponent($parentDataClass, $relationName);
@@ -1048,10 +1054,17 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
         foreach ($this->eagerLoadRelationChains as $relationChain) {
             $parentDataClass = $this->dataClass();
             $parentIDs = $topLevelIDs;
-            /** @var Query|array<DataObject|EagerLoadedList> */
             $parentRelationData = $query;
             $chainToDate = [];
+            $polymorphicEncountered = false;
             foreach (explode('.', $relationChain) as $relationName) {
+                if ($polymorphicEncountered) {
+                    $polymorphicRelation = $chainToDate[array_key_last($chainToDate)];
+                    throw new InvalidArgumentException(
+                        "Invalid relation passed to eagerLoad() - $relationChain. Further nested relations are not supported after polymorphic has_one relation $polymorphicRelation."
+                    );
+                }
+                /** @var Query|array<DataObject|EagerLoadedList> $parentRelationData */
                 $chainToDate[] = $relationName;
                 list(
                     $relationDataClass,
@@ -1069,6 +1082,9 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
                             $relationName,
                             $relationType
                         );
+                        if ($relationComponent['joinClass']) {
+                            $polymorphicEncountered = true;
+                        }
                         break;
                     case 'belongs_to':
                         list($parentRelationData, $parentIDs) = $this->fetchEagerLoadBelongsTo(
@@ -1114,12 +1130,20 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
 
     private function fetchEagerLoadHasOne(
         Query|array $parents,
-        string $hasOneIDField,
+        array $hasOneRelation,
         string $relationDataClass,
         string $relationChain,
         string $relationName,
         string $relationType
     ): array {
+        // Throw exception if developers try to manipulate a has_one relation as a list
+        if ($this->eagerLoadAllRelations[$relationChain] !== null) {
+            throw new LogicException("Cannot manipulate eagerloading query for $relationType relation $relationName");
+        }
+
+        $hasOneIDField = $hasOneRelation['joinField'];
+        $hasOneClassField = $hasOneRelation['joinClass'];
+
         $fetchedIDs = [];
         $addTo = [];
 
@@ -1128,46 +1152,63 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
             if (is_array($parentData)) {
                 // $parentData represents a record in this DataList
                 $hasOneID = $parentData[$hasOneIDField];
-                $fetchedIDs[] = $hasOneID;
-                $addTo[$hasOneID] = $parentData['ID'];
+
+                if ($hasOneID) {
+                    // Class field is only set for polymorphic has_one relations
+                    $hasOneClass = $hasOneClassField ? $parentData[$hasOneClassField] : $relationDataClass;
+
+                    $fetchedIDs[$hasOneClass][$hasOneID] = $hasOneID;
+                    $addTo[$hasOneClass][$hasOneID][] = $parentData['ID'];
+                }
             } elseif ($parentData instanceof DataObject) {
                 // $parentData represents another has_one record
                 $hasOneID = $parentData->$hasOneIDField;
-                $fetchedIDs[] = $hasOneID;
-                $addTo[$hasOneID] = $parentData;
+
+                if ($hasOneID) {
+                    // Class field is only set for polymorphic has_one relations
+                    $hasOneClass = $hasOneClassField ? $parentData->$hasOneClassField : $relationDataClass;
+
+                    $fetchedIDs[$hasOneClass][$hasOneID] = $hasOneID;
+                    $addTo[$hasOneClass][$hasOneID][] = $parentData;
+                }
             } elseif ($parentData instanceof EagerLoadedList) {
                 // $parentData represents a has_many or many_many relation
                 foreach ($parentData->getRows() as $parentRow) {
+                    // $parentData represents another has_one record
                     $hasOneID = $parentRow[$hasOneIDField];
-                    $fetchedIDs[] = $hasOneID;
-                    $addTo[$hasOneID] = ['ID' => $parentRow['ID'], 'list' => $parentData];
+
+                    if ($hasOneID) {
+                        // Class field is only set for polymorphic has_one relations
+                        $hasOneClass = $hasOneClassField ? $parentRow[$hasOneClassField] : $relationDataClass;
+
+                        $fetchedIDs[$hasOneClass][$hasOneID] = $hasOneID;
+                        $addTo[$hasOneClass][$hasOneID][] = ['ID' => $parentRow['ID'], 'list' => $parentData];
+                    }
                 }
             } else {
                 throw new LogicException("Invalid parent for eager loading $relationType relation $relationName");
             }
         }
 
-        $fetchedRecords = DataObject::get($relationDataClass)->byIDs($fetchedIDs)->toArray();
+        $fetchedRecords = [];
 
-        // Add each fetched record to the appropriate place
-        foreach ($fetchedRecords as $fetched) {
-            $fetchedID = $fetched->ID;
-            $added = false;
-            foreach ($addTo as $matchID => $addHere) {
-                if ($matchID === $fetchedID) {
-                    if ($addHere instanceof DataObject) {
-                        $addHere->setEagerLoadedData($relationName, $fetched);
-                    } elseif (is_array($addHere)) {
-                        $addHere['list']->addEagerLoadedData($relationName, $addHere['ID'], $fetched);
-                    } else {
-                        $this->eagerLoadedData[$relationChain][$addHere][$relationName] = $fetched;
+        foreach ($fetchedIDs as $class => $ids) {
+            foreach (DataObject::get($class)->byIDs($ids) as $fetched) {
+                $fetchedRecords[] = $fetched;
+
+                if (isset($addTo[$class][$fetched->ID])) {
+                    foreach ($addTo[$class][$fetched->ID] as $addHere) {
+                        if ($addHere instanceof DataObject) {
+                            $addHere->setEagerLoadedData($relationName, $fetched);
+                        } elseif (is_array($addHere)) {
+                            $addHere['list']->addEagerLoadedData($relationName, $addHere['ID'], $fetched);
+                        } else {
+                            $this->eagerLoadedData[$relationChain][$addHere][$relationName] = $fetched;
+                        }
                     }
-                    $added = true;
-                    break;
+                } else {
+                    throw new LogicException("Couldn't find parent for record $class on $relationType relation $relationName");
                 }
-            }
-            if (!$added) {
-                throw new LogicException("Couldn't find parent for record $fetchedID on $relationType relation $relationName");
             }
         }
 
@@ -1175,6 +1216,10 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
         // into the has_one components - DataObject does that for us in getComponent() without any extra
         // db calls.
 
+        // fetchEagerLoadRelations expects these to be flat arrays if the relation is not polymorphic
+        if (!$hasOneClassField) {
+            return [$fetchedRecords, $fetchedIDs[$relationDataClass] ?? []];
+        }
         return [$fetchedRecords, $fetchedIDs];
     }
 
@@ -1187,6 +1232,11 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
         string $relationName,
         string $relationType
     ): array {
+        // Throw exception if developers try to manipulate a belongs_to relation as a list
+        if ($this->eagerLoadAllRelations[$relationChain] !== null) {
+            throw new LogicException("Cannot manipulate eagerloading query for $relationType relation $relationName");
+        }
+
         $belongsToIDField = $component['joinField'];
         // Get ALL of the items for this relation up front, for ALL of the parents
         // Fetched as an array to avoid sporadic additional queries when the DataList is looped directly
@@ -1227,9 +1277,11 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
         string $relationName,
         string $relationType
     ): array {
+        $fetchList = DataObject::get($relationDataClass)->filter([$hasManyIDField => $parentIDs]);
+        $fetchList = $this->manipulateEagerLoadingQuery($fetchList, $relationChain, $relationType);
         // Get ALL of the items for this relation up front, for ALL of the parents
         // Fetched as an array to avoid sporadic additional queries when the DataList is looped directly
-        $fetchedRows = DataObject::get($relationDataClass)->filter([$hasManyIDField => $parentIDs])->getFinalisedQuery();
+        $fetchedRows = $fetchList->getFinalisedQuery();
         $fetchedIDs = [];
         $eagerLoadedLists = [];
 
@@ -1283,10 +1335,6 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
         $fetchedIDs = [];
         $eagerLoadedLists = [];
 
-        // Get the join records so we can correctly identify which children belong to which parents
-        // This also holds extra fields data
-        $joinRows = DB::query('SELECT * FROM "' . $joinTable . '" WHERE "' . $parentIDField . '" IN (' . implode(',', $parentIDs) . ')');
-
         // Use a real RelationList here so that the extraFields and join record are correctly fetched for all relations
         // There's a lot of special handling for things like DBComposite extra fields, etc.
         if ($joinClass !== null) {
@@ -1313,11 +1361,34 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
         $relationListClass = get_class($relationList);
 
         // Get ALL of the items for this relation up front, for ALL of the parents
-        $fetchedRows = $relationList->forForeignID($parentIDs)->getFinalisedQuery();
+        $fetchList = $relationList->forForeignID($parentIDs);
+        $fetchList = $this->manipulateEagerLoadingQuery($fetchList, $relationChain, $relationType);
+        $fetchedRows = $fetchList->getFinalisedQuery();
 
         foreach ($fetchedRows as $row) {
             $fetchedRowsArray[$row['ID']] = $row;
             $fetchedIDs[] = $row['ID'];
+        }
+
+        // Get the join records so we can correctly identify which children belong to which parents
+        // If there are no parents and no children, skip this to avoid an error (and to skip an unnecessary DB call)
+        // Note that $joinRows also holds extra fields data
+        $joinRows = [];
+        if (!empty($parentIDs) && !empty($fetchedIDs)) {
+            // Use sortByField to generate the ORDER BY clause
+            $orderByClause = DB::get_conn()->sortByField($childIDField, $fetchedIDs);
+
+            // Build the query with the order clause
+            $joinQuery = 'SELECT * FROM "' . $joinTable
+                // Only get joins relevant for the parent list
+                . '" WHERE "' . $parentIDField . '" IN (' . implode(',', $parentIDs) . ')'
+                // Exclude any children that got filtered out
+                . ' AND "' . $childIDField . '" IN (' . implode(',', $fetchedIDs) . ')'
+                // Respect sort order of fetched items
+                . ' ORDER BY ' . $orderByClause;
+
+            // Execute the query
+            $joinRows = DB::query($joinQuery);
         }
 
         // Store the children in an EagerLoadedList against the correct parent
@@ -1391,7 +1462,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
                 if ($parentData->hasID($parentID)) {
                     $parentData->addEagerLoadedData($relationName, $parentID, $eagerLoadedData);
                     $added = true;
-                    break;
+                    // can't break here, because the parent might be in multiple relation lists
                 }
             } else {
                 throw new LogicException("Invalid parent for eager loading $relationType relation $relationName");
@@ -1401,6 +1472,33 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
         if (!$added) {
             throw new LogicException("Couldn't find parent for $relationType relation $relationName");
         }
+    }
+
+    /**
+     * NOTE: Do not change `DataList` to `static` in this method signature.
+     * Subclasses of DataList must still accept DataList arguments and return DataList!
+     */
+    private function manipulateEagerLoadingQuery(
+        DataList $fetchList,
+        string $relationChain,
+        string $relationType
+    ): DataList {
+        $filterCallback = $this->eagerLoadAllRelations[$relationChain];
+        if ($filterCallback !== null) {
+            $fetchList = $filterCallback($fetchList);
+        }
+        if (!($fetchList instanceof DataList)) {
+            throw new LogicException(
+                "Eagerloading callback for $relationType relation $relationChain must return a DataList."
+            );
+        }
+        $limit = $fetchList->dataQuery->query()->getLimit();
+        if (!empty($limit) && ($limit['start'] !== 0 || $limit['limit'] !== null)) {
+            throw new LogicException(
+                "Cannot apply limit to eagerloaded data for $relationType relation $relationChain."
+            );
+        }
+        return $fetchList;
     }
 
     private function fillEmptyEagerLoadedRelations(
@@ -1452,17 +1550,49 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * You can specify nested relations by using dot notation, and you can also pass in multiple relations.
      * When specifying nested relations there is a maximum of 3 levels of relations allowed i.e. 2 dots
      *
-     * Example:
+     * Examples:
+     * <code>
      * $myDataList->eagerLoad('MyRelation.NestedRelation.EvenMoreNestedRelation', 'DifferentRelation')
+     * </code>
+     *
+     * <code>
+     * $myDataList->eagerLoad([
+     *     'MyRelation.NestedRelation.EvenMoreNestedRelation',
+     *     'DifferentRelation' => fn (DataList $list) => $list->filter($filterArgs),
+     * ]);
+     * </code>
      *
      * IMPORTANT: Calling eagerLoad() will cause any relations on DataObjects to be returned as an EagerLoadedList
      * instead of a subclass of DataList such as HasManyList i.e. MyDataObject->MyHasManyRelation() returns an EagerLoadedList
+     *
+     * @return static<T>
      */
     public function eagerLoad(...$relationChains): static
     {
         $list = clone $this;
-        foreach ($relationChains as $relationChain) {
-            // Don't add any relations we've added before
+
+        // If an array is passed in directly, treat it as though $relationChains wasn't spread.
+        if (count($relationChains) === 1 && is_array($relationChains[array_key_first($relationChains)])) {
+            $relationChains = $relationChains[array_key_first($relationChains)];
+        }
+
+        foreach ($relationChains as $relationChain => $callback) {
+            // Allow non-associative arrays
+            if (is_numeric($relationChain)) {
+                $relationChain = $callback;
+                $callback = null;
+            }
+
+            // Reject non-callable in associative array
+            if ($callback !== null && !is_callable($callback)) {
+                throw new LogicException(
+                    'Value of associative array must be a callable.'
+                    . 'If you don\'t want to pre-filter the list, use an indexed array.'
+                );
+            }
+
+            // Don't add any relations we've added before.
+            // Note we explicitly cannot use `isset` here, because most of the values are set to `null`.
             if (array_key_exists($relationChain, $list->eagerLoadAllRelations)) {
                 continue;
             }
@@ -1483,8 +1613,11 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
                 // Keep track of what we've seen before so we don't accidentally add a level 1 relation
                 // (e.g. "Players") to the chains list when we already have it as part of a longer chain
                 // (e.g. "Players.Teams")
-                $list->eagerLoadAllRelations[$item] = $item;
+                $list->eagerLoadAllRelations[$item] ??= null;
             }
+            // Set the callback for this chain
+            $list->eagerLoadAllRelations[$relationChain] = $callback;
+            // Set the relation chain to be loaded
             $list->eagerLoadRelationChains[$relationChain] = $relationChain;
         }
         return $list;
@@ -1548,11 +1681,10 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
 
 
     /**
-     * Returns the first item in this DataList (instanceof DataObject)
+     * Returns the first item in this DataList
      *
      * The object returned is not cached, unlike {@link DataObject::get_one()}
-     *
-     * @return DataObject|null
+     * @return T|null
      */
     public function first()
     {
@@ -1568,11 +1700,10 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
     }
 
     /**
-     * Returns the last item in this DataList (instanceof DataObject)
+     * Returns the last item in this DataList
      *
      * The object returned is not cached, unlike {@link DataObject::get_one()}
-     *
-     * @return DataObject|null
+     * @return T|null
      */
     public function last()
     {
@@ -1605,7 +1736,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      *
      * @param string $key
      * @param string $value
-     * @return DataObject|null
+     * @return T|null
      */
     public function find($key, $value)
     {
@@ -1616,7 +1747,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * Restrict the columns to fetch into this DataList
      *
      * @param array $queriedColumns
-     * @return static
+     * @return static<T>
      */
     public function setQueriedColumns($queriedColumns)
     {
@@ -1625,12 +1756,6 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
         });
     }
 
-    /**
-     * Filter this list to only contain the given Primary IDs
-     *
-     * @param array $ids Array of integers
-     * @return $this
-     */
     public function byIDs($ids)
     {
         return $this->filter('ID', $ids);
@@ -1640,9 +1765,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * Return the first DataObject with the given ID
      *
      * The object returned is not cached, unlike {@link DataObject::get_by_id()}
-     *
-     * @param int $id
-     * @return DataObject|null
+     * @return T|null
      */
     public function byID($id)
     {
@@ -1683,7 +1806,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * Sets the ComponentSet to be the given ID list.
      * Records will be added and deleted as appropriate.
      *
-     * @param array $idList List of IDs.
+     * @param array<int> $idList List of IDs.
      */
     public function setByIDList($idList)
     {
@@ -1716,7 +1839,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * Returns an array with both the keys and values set to the IDs of the records in this list.
      * Does not respect sort order. Use ->column("ID") to get an ID list with the current sort.
      *
-     * @return array
+     * @return array<int>
      */
     public function getIDList()
     {
@@ -1734,13 +1857,13 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      *     DataList::Create(\SilverStripe\Security\Group::class)->relation("Members")
      *
      * @param string $relationName
-     * @return HasManyList|ManyManyList
+     * @return RelationList
      */
     public function relation($relationName)
     {
         $ids = $this->column('ID');
         $singleton = DataObject::singleton($this->dataClass);
-        /** @var HasManyList|ManyManyList $relation */
+        /** @var RelationList $relation */
         $relation = $singleton->$relationName($ids);
         return $relation;
     }
@@ -1753,8 +1876,8 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
     /**
      * Add a number of items to the component set.
      *
-     * @param array $items Items to add, as either DataObjects or IDs.
-     * @return $this
+     * @param array<DataObject> $items Items to add, as either DataObjects or IDs.
+     * @return static<T>
      */
     public function addMany($items)
     {
@@ -1767,8 +1890,8 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
     /**
      * Remove the items from this list with the given IDs
      *
-     * @param array $idList
-     * @return $this
+     * @param array<int> $idList
+     * @return static<T>
      */
     public function removeMany($idList)
     {
@@ -1782,7 +1905,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * Remove every element in this DataList matching the given $filter.
      *
      * @param string|array $filter - a sql type where filter
-     * @return $this
+     * @return static<T>
      */
     public function removeByFilter($filter)
     {
@@ -1795,7 +1918,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
     /**
      * Shuffle the datalist using a random function provided by the SQL engine
      *
-     * @return $this
+     * @return static<T>
      */
     public function shuffle()
     {
@@ -1805,7 +1928,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
     /**
      * Remove every element in this DataList.
      *
-     * @return $this
+     * @return static<T>
      */
     public function removeAll()
     {
@@ -1819,7 +1942,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * This method are overloaded by HasManyList and ManyMany list to perform more sophisticated
      * list manipulation
      *
-     * @param mixed $item
+     * @param DataObject|int $item
      */
     public function add($item)
     {
@@ -1831,7 +1954,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * Return a new item to add to this DataList.
      *
      * @param array $initialFields
-     * @return DataObject
+     * @return T
      */
     public function newObject($initialFields = null)
     {
@@ -1867,7 +1990,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
     /**
      * Reverses a list of items.
      *
-     * @return static
+     * @return static<T>
      */
     public function reverse()
     {
@@ -1888,6 +2011,8 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      * Returns item stored in list with index $key
      *
      * The object returned is not cached, unlike {@link DataObject::get_one()}
+     *
+     * @return T|null
      */
     public function offsetGet(mixed $key): ?DataObject
     {
@@ -1922,7 +2047,7 @@ class DataList extends ViewableData implements SS_List, Filterable, Sortable, Li
      *
      * @param int $chunkSize
      * @throws InvalidArgumentException If `$chunkSize` has an invalid size.
-     * @return Generator|DataObject[]
+     * @return iterable<T>
      */
     public function chunkedFetch(int $chunkSize = 1000): iterable
     {

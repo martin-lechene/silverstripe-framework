@@ -7,17 +7,29 @@ use SilverStripe\Dev\Install\DatabaseAdapterRegistry;
 use SilverStripe\ORM\DB;
 use Exception;
 use LogicException;
+use SilverStripe\Dev\Deprecation;
+use SilverStripe\ORM\Connect\NullDatabase;
 
 /**
  * Simple Kernel container
  */
 class CoreKernel extends BaseKernel
 {
+    protected bool $bootDatabase = true;
 
     /**
      * Indicates whether the Kernel has been flushed on boot
      */
     private ?bool $flush = null;
+
+    /**
+     * Set whether the database should boot or not.
+     */
+    public function setBootDatabase(bool $bool): static
+    {
+        $this->bootDatabase = $bool;
+        return $this;
+    }
 
     /**
      * @param false $flush
@@ -27,6 +39,10 @@ class CoreKernel extends BaseKernel
     public function boot($flush = false)
     {
         $this->flush = $flush;
+
+        if (!$this->bootDatabase) {
+            DB::set_conn(new NullDatabase());
+        }
 
         $this->bootPHP();
         $this->bootManifests($flush);
@@ -46,13 +62,16 @@ class CoreKernel extends BaseKernel
      */
     protected function validateDatabase()
     {
+        if (!$this->bootDatabase) {
+            return;
+        }
         $databaseConfig = DB::getConfig();
         // Gracefully fail if no DB is configured
         if (empty($databaseConfig['database'])) {
             $msg = 'Silverstripe Framework requires a "database" key in DB::getConfig(). ' .
                 'Did you forget to set SS_DATABASE_NAME or SS_DATABASE_CHOOSE_NAME in your environment?';
             $this->detectLegacyEnvironment();
-            $this->redirectToInstaller($msg);
+            Deprecation::withSuppressedNotice(fn() => $this->redirectToInstaller($msg));
         }
     }
 
@@ -61,6 +80,9 @@ class CoreKernel extends BaseKernel
      */
     protected function bootDatabaseGlobals()
     {
+        if (!$this->bootDatabase) {
+            return;
+        }
         // Now that configs have been loaded, we can check global for database config
         global $databaseConfig;
         global $database;
@@ -93,6 +115,9 @@ class CoreKernel extends BaseKernel
      */
     protected function bootDatabaseEnvVars()
     {
+        if (!$this->bootDatabase) {
+            return;
+        }
         // Set default database config
         $databaseConfig = $this->getDatabaseConfig();
         $databaseConfig['database'] = $this->getDatabaseName();

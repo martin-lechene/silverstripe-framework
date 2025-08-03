@@ -20,8 +20,8 @@ use SilverStripe\ORM\ManyManyList;
  * @property string Title
  * @property string OnlyAdminCanApply
  *
- * @method HasManyList Codes() List of PermissionRoleCode objects
- * @method ManyManyList Groups() List of Group objects
+ * @method HasManyList<PermissionRoleCode> Codes()
+ * @method ManyManyList<Group> Groups()
  */
 class PermissionRole extends DataObject
 {
@@ -45,6 +45,8 @@ class PermissionRole extends DataObject
     private static $singular_name = 'Role';
 
     private static $plural_name = 'Roles';
+
+    private static bool $require_sudo_mode = true;
 
     public function getCMSFields()
     {

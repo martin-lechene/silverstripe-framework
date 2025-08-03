@@ -37,10 +37,12 @@ use SilverStripe\Security\IdentityStore;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
+use SilverStripe\SupportedModules\MetaData;
 use SilverStripe\View\SSViewer;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mailer\Transport\NullTransport;
+use SilverStripe\Core\Path;
 
 /**
  * Test case class for the Silverstripe framework.
@@ -61,6 +63,13 @@ abstract class SapphireTest extends TestCase implements TestOnly
      * @var string|array
      */
     protected static $fixture_file = null;
+
+    /**
+     * Whether to set the i18n locale to en_US for supported modules before running the test.
+     * This should only be set to false if calling setI18nLocale() causes the test to
+     * throw an exception as part of calling setI18nLocale()
+     */
+    protected bool $doSetSupportedModuleLocaleToUS = true;
 
     /**
      * @var Boolean If set to TRUE, this will force a test database to be generated
@@ -164,6 +173,11 @@ abstract class SapphireTest extends TestCase implements TestOnly
     protected FixtureFactory|bool $fixtureFactory;
 
     /**
+     * The original value of ini 'max_execution_time' before any code or tests change it
+     */
+    private int $origMaxExecutionTime;
+
+    /**
      * @return TempDatabase
      */
     public static function tempDB()
@@ -206,7 +220,7 @@ abstract class SapphireTest extends TestCase implements TestOnly
      */
     protected static function is_running_test()
     {
-        return self::$is_running_test;
+        return SapphireTest::$is_running_test;
     }
 
     /**
@@ -216,7 +230,7 @@ abstract class SapphireTest extends TestCase implements TestOnly
      */
     protected static function set_is_running_test($bool)
     {
-        self::$is_running_test = $bool;
+        SapphireTest::$is_running_test = $bool;
     }
 
     /**
@@ -252,6 +266,14 @@ abstract class SapphireTest extends TestCase implements TestOnly
     }
 
     /**
+     * Called after the database is created, but before fixtures are loaded.
+     */
+    public function onBeforeLoadFixtures(): void
+    {
+        // no-op - this method is intended to be overridden by subclasses.
+    }
+
+    /**
      * Setup  the test.
      * Always sets up in order:
      *  - Reset php state
@@ -272,21 +294,13 @@ abstract class SapphireTest extends TestCase implements TestOnly
         // Call state helpers
         static::$state->setUp($this);
 
-        // i18n needs to be set to the defaults or tests fail
-        if (class_exists(i18n::class)) {
-            i18n::set_locale(i18n::config()->uninherited('default_locale'));
-        }
+        $this->setI18nLocale();
 
         // Set default timezone consistently to avoid NZ-specific dependencies
         date_default_timezone_set('UTC');
 
-        if (class_exists(Member::class)) {
-            Member::set_password_validator(null);
-        }
-
-        if (class_exists(Cookie::class)) {
-            Cookie::config()->set('report_errors', false);
-        }
+        Member::set_password_validator(null);
+        Cookie::config()->set('report_errors', false);
 
         if (class_exists(RootURLController::class)) {
             RootURLController::reset();
@@ -324,6 +338,8 @@ abstract class SapphireTest extends TestCase implements TestOnly
         Email::config()->remove('send_all_emails_from');
         Email::config()->remove('cc_all_emails_to');
         Email::config()->remove('bcc_all_emails_to');
+
+        $this->origMaxExecutionTime = ini_get('max_execution_time');
     }
 
     /**
@@ -464,10 +480,11 @@ abstract class SapphireTest extends TestCase implements TestOnly
     /**
      * Get an object from the fixture.
      *
-     * @param string $className The data class or table name, as specified in your fixture file. Parent classes won't work
+     * @template T of DataObject
+     * @param class-string<T> $className The data class or table name, as specified in your fixture file. Parent classes won't work
      * @param string $identifier The identifier string, as provided in your fixture file
      *
-     * @return DataObject
+     * @return T
      */
     protected function objFromFixture($className, $identifier)
     {
@@ -554,6 +571,10 @@ abstract class SapphireTest extends TestCase implements TestOnly
 
         // Call state helpers
         static::$state->tearDown($this);
+
+        // Reset max_execution_time in case some code or a unit test changed it,
+        // either via ini_set() or set_time_limit()
+        ini_set('max_execution_time', $this->origMaxExecutionTime);
     }
 
     /**
@@ -563,7 +584,6 @@ abstract class SapphireTest extends TestCase implements TestOnly
      */
     public function clearEmails()
     {
-        /** @var MailerInterface $mailer */
         $mailer = Injector::inst()->get(MailerInterface::class);
         if ($mailer instanceof TestMailer) {
             $mailer->clearEmails();
@@ -584,7 +604,6 @@ abstract class SapphireTest extends TestCase implements TestOnly
      */
     public static function findEmail($to, $from = null, $subject = null, $content = null)
     {
-        /** @var MailerInterface $mailer */
         $mailer = Injector::inst()->get(MailerInterface::class);
         if ($mailer instanceof TestMailer) {
             return $mailer->findEmail($to, $from, $subject, $content);
@@ -654,7 +673,7 @@ abstract class SapphireTest extends TestCase implements TestOnly
     public static function assertListContains($matches, SS_List $list, $message = '')
     {
         if (!is_array($matches)) {
-            throw self::createInvalidArgumentException(
+            throw SapphireTest::createInvalidArgumentException(
                 1,
                 'array'
             );
@@ -692,7 +711,7 @@ abstract class SapphireTest extends TestCase implements TestOnly
     public static function assertListNotContains($matches, SS_List $list, $message = '')
     {
         if (!is_array($matches)) {
-            throw self::createInvalidArgumentException(
+            throw SapphireTest::createInvalidArgumentException(
                 1,
                 'array'
             );
@@ -732,7 +751,7 @@ abstract class SapphireTest extends TestCase implements TestOnly
     public static function assertListEquals($matches, SS_List $list, $message = '')
     {
         if (!is_array($matches)) {
-            throw self::createInvalidArgumentException(
+            throw SapphireTest::createInvalidArgumentException(
                 1,
                 'array'
             );
@@ -763,7 +782,7 @@ abstract class SapphireTest extends TestCase implements TestOnly
     public static function assertListAllMatch($match, SS_List $list, $message = '')
     {
         if (!is_array($match)) {
-            throw self::createInvalidArgumentException(
+            throw SapphireTest::createInvalidArgumentException(
                 1,
                 'array'
             );
@@ -1041,7 +1060,6 @@ abstract class SapphireTest extends TestCase implements TestOnly
      */
     public function logOut()
     {
-        /** @var IdentityStore $store */
         $store = Injector::inst()->get(IdentityStore::class);
         $store->logOut();
     }
@@ -1232,5 +1250,49 @@ abstract class SapphireTest extends TestCase implements TestOnly
         DBDatetime::set_mock_now($now);
 
         return $now;
+    }
+
+    /**
+     * Sets the locale which unit-tests should be run in
+     */
+    private function setI18nLocale(): void
+    {
+        if (!$this->doSetSupportedModuleLocaleToUS) {
+            $this->setLocaleToDefault();
+            return;
+        }
+        $path = $this->getCurrentRelativePath();
+        $packagistName = '';
+        if (preg_match('#(^|/)vendor/([^/]+/[^/]+)/.+#', $path, $matches)) {
+            // Running unit tests of a module in the vendor folder
+            $packagistName = $matches[2];
+        } else {
+            // Running unit tests of a module or project in the root folder
+            $file = Path::join(BASE_PATH, 'composer.json');
+            if (file_exists($file)) {
+                $json = json_decode(file_get_contents($file), true);
+                $packagistName = $json['name'] ?? '';
+            }
+        }
+        $metaData = MetaData::getMetaDataByPackagistName($packagistName);
+        $isSupportedModule = !empty($metaData);
+        if ($isSupportedModule) {
+            // Anything that is in silverstripe/supported-module has unit tests in en_US
+            // Update the default_locale config in case in case any config at the project level or any
+            // installed optional module has set it to a non-en_US locale
+            i18n::config()->set('default_locale', 'en_US');
+            i18n::set_locale('en_US');
+        } else {
+            $this->setLocaleToDefault();
+        }
+    }
+
+    /**
+     * Set the locale to the default_locale, which may have been set at project level to a
+     * non-en_US locale and the project unit tests expect that locale to be set
+     */
+    private function setLocaleToDefault(): void
+    {
+        i18n::set_locale(i18n::config()->get('default_locale'));
     }
 }

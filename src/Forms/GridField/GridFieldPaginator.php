@@ -9,6 +9,7 @@ use SilverStripe\ORM\UnsavedRelationList;
 use SilverStripe\View\ArrayData;
 use SilverStripe\View\SSViewer;
 use LogicException;
+use SilverStripe\Dev\Deprecation;
 
 /**
  * GridFieldPaginator paginates the {@link GridField} list and adds controls
@@ -33,6 +34,7 @@ class GridFieldPaginator extends AbstractGridFieldComponent implements GridField
 
     /**
      * See {@link setThrowExceptionOnBadDataType()}
+     * @deprecated 5.2.0 Will be removed without equivalent functionality in a future major release
      */
     protected $throwExceptionOnBadDataType = true;
 
@@ -57,9 +59,11 @@ class GridFieldPaginator extends AbstractGridFieldComponent implements GridField
      *
      * @param bool $throwExceptionOnBadDataType
      * @return $this
+     * @deprecated 5.2.0 Will be removed without equivalent functionality in a future major release
      */
     public function setThrowExceptionOnBadDataType($throwExceptionOnBadDataType)
     {
+        Deprecation::notice('5.2.0', 'Will be removed without equivalent functionality in a future major release');
         $this->throwExceptionOnBadDataType = $throwExceptionOnBadDataType;
         return $this;
     }
@@ -68,9 +72,11 @@ class GridFieldPaginator extends AbstractGridFieldComponent implements GridField
      * See {@link setThrowExceptionOnBadDataType()}
      *
      * @return bool
+     * @deprecated 5.2.0 Will be removed without equivalent functionality in a future major release
      */
     public function getThrowExceptionOnBadDataType()
     {
+        Deprecation::notice('5.2.0', 'Will be removed without equivalent functionality in a future major release');
         return $this->throwExceptionOnBadDataType;
     }
 
@@ -86,6 +92,7 @@ class GridFieldPaginator extends AbstractGridFieldComponent implements GridField
         if ($dataList instanceof Limitable) {
             return true;
         } else {
+            // This will be changed to always throw an exception in a future major release.
             if ($this->throwExceptionOnBadDataType) {
                 throw new LogicException(
                     static::class . " expects an SS_Limitable list to be passed to the GridField."
@@ -131,6 +138,11 @@ class GridFieldPaginator extends AbstractGridFieldComponent implements GridField
     }
 
     protected $totalItems = 0;
+
+    public function getTotalItems(): int
+    {
+        return $this->totalItems;
+    }
 
     /**
      * Retrieves/Sets up the state object used to store and retrieve information

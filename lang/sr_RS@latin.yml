@@ -46,7 +46,6 @@ sr_RS@latin:
   SilverStripe\Forms\GridField\GridField:
     Add: 'Dodaj {name}'
     CSVEXPORT: 'Izvezi u CSV'
-    Filter: Filter
     FilterBy: 'Filtriraj po'
     Find: Pronađi
     LinkExisting: 'Postojanje linka'
@@ -74,6 +73,8 @@ sr_RS@latin:
     Saved: 'Sačuvano {name} {link}'
   SilverStripe\Forms\GridField\GridFieldEditButton:
     EDIT: Izmeni
+  SilverStripe\Forms\GridField\GridFieldFilterHeader:
+    Search_Default: Pretraži
   SilverStripe\Forms\GridField\GridFieldPaginator:
     OF: od
     Page: Stranica
@@ -86,10 +87,12 @@ sr_RS@latin:
   SilverStripe\Forms\NullableField:
     IsNullLabel: 'je Null'
   SilverStripe\Forms\NumericField:
-    VALIDATION: '''{value}'' nije broj. Samo brojevi mogu biti prihvaćeni za ovo polje'
+    VALIDATION: "'{value}' nije broj. Samo brojevi mogu biti prihvaćeni za ovo polje"
   SilverStripe\Forms\TimeField:
     VALIDATEFORMAT: 'Unesite ispravan format vremena ({format})'
   SilverStripe\ORM\DataObject:
+    FILTER_WITHINRANGE_FROM: Od
+    FILTER_WITHINRANGE_TO: Za
     PLURALNAME: 'Objekti podataka'
     SINGULARNAME: 'Objekat podataka'
   SilverStripe\ORM\FieldType\DBBoolean:
@@ -144,8 +147,6 @@ sr_RS@latin:
     IP: 'IP adresa'
     PLURALNAME: 'Pokušaji prijave'
     SINGULARNAME: 'Pokušaj prijave'
-    Status: Status
-    db_Status: Status
     has_one_Member: Član
   SilverStripe\Security\Member:
     ADDGROUP: 'Dodaj grupu'
@@ -198,7 +199,6 @@ sr_RS@latin:
     PREVPASSWORD: 'Već ste koristili navedenu lozinku u prošlosti. Stoga, izaberite drugu lozinku'
     TOOSHORT: 'Lozinka je prekratka. Lozinka mora sadržati bar {minimum} znakova'
   SilverStripe\Security\Permission:
-    AdminGroup: Administrator
     CMS_ACCESS_CATEGORY: 'Pristup CMS-u'
     CONTENT_CATEGORY: 'Dozvolje za sadržaj'
     FULLADMINRIGHTS: 'Puna administrativna prava'
@@ -238,3 +238,8 @@ sr_RS@latin:
     LOGOUT: Odjava
     NOTEPAGESECURED: 'Ova strana je obezbeđena. Unesite svoje podatke i mi ćemo vam poslati sadržaj.'
     NOTERESETPASSWORD: 'Unesite svoju adresu e-pošte i mi ćemo vam poslati link pomoću kojeg možete da promenite svoju lozinku'
+  SilverStripe\Security\Validation\PasswordValidator:
+    PREVPASSWORD: 'Već ste koristili navedenu lozinku u prošlosti. Stoga, izaberite drugu lozinku'
+  SilverStripe\Security\Validation\RulesPasswordValidator:
+    LOWCHARSTRENGTH: 'Pojačajte lozinku dodavanjem nekih od sledećih znakova: {chars}'
+    TOOSHORT: 'Lozinka je prekratka. Lozinka mora sadržati bar {minimum} znakova'

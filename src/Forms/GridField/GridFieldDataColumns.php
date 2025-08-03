@@ -4,7 +4,12 @@ namespace SilverStripe\Forms\GridField;
 
 use SilverStripe\Core\Convert;
 use InvalidArgumentException;
-use SilverStripe\ORM\DataObject;
+use LogicException;
+use SilverStripe\Dev\Deprecation;
+use SilverStripe\ORM\FieldType\DBField;
+use SilverStripe\ORM\FieldType\DBHTMLText;
+use SilverStripe\ORM\FieldType\DBHTMLVarchar;
+use SilverStripe\View\ViewableData;
 
 /**
  * @see GridField
@@ -28,6 +33,8 @@ class GridFieldDataColumns extends AbstractGridFieldComponent implements GridFie
      * @var array
      */
     protected $displayFields = [];
+
+    private bool $doEscapeFields = true;
 
     /**
      * Modify the list of columns displayed in the table.
@@ -87,7 +94,15 @@ class GridFieldDataColumns extends AbstractGridFieldComponent implements GridFie
     public function getDisplayFields($gridField)
     {
         if (!$this->displayFields) {
-            return singleton($gridField->getModelClass())->summaryFields();
+            $modelClass = $gridField->getModelClass();
+            $singleton = singleton($modelClass);
+            if (!$singleton->hasMethod('summaryFields')) {
+                throw new LogicException(
+                    'Cannot dynamically determine columns. Pass the column names to setDisplayFields()'
+                    . " or implement a summaryFields() method on $modelClass"
+                );
+            }
+            return $singleton->summaryFields();
         }
         return $this->displayFields;
     }
@@ -143,10 +158,32 @@ class GridFieldDataColumns extends AbstractGridFieldComponent implements GridFie
     }
 
     /**
+     * Determines whether this component escapes strings returned from getColumnContent().
+     *
+     * This is useful because by default strings are escaped for use in HTML. This
+     * means there are some circumstances in which the escaping done here can result
+     * in double escaping those values further down the line, such as use with
+     * GridFieldPrintButton which temporarily sets this to false.
+     */
+    public function setDoEscapeFields(bool $doEscapeFields): static
+    {
+        $this->doEscapeFields = $doEscapeFields;
+        return $this;
+    }
+
+    /**
+     * Get whether this component escapes strings returned from getColumnContent().
+     */
+    public function getDoEscapeFields(): bool
+    {
+        return $this->doEscapeFields;
+    }
+
+    /**
      * HTML for the column, content of the <td> element.
      *
      * @param GridField $gridField
-     * @param DataObject $record Record displayed in this row
+     * @param ViewableData $record Record displayed in this row
      * @param string $columnName
      * @return string HTML for the column. Return NULL to skip.
      */
@@ -180,7 +217,7 @@ class GridFieldDataColumns extends AbstractGridFieldComponent implements GridFie
      * Attributes for the element containing the content returned by {@link getColumnContent()}.
      *
      * @param  GridField $gridField
-     * @param  DataObject $record displayed in this row
+     * @param  ViewableData $record displayed in this row
      * @param  string $columnName
      * @return array
      */
@@ -216,12 +253,14 @@ class GridFieldDataColumns extends AbstractGridFieldComponent implements GridFie
     /**
      * Translate a Object.RelationName.ColumnName $columnName into the value that ColumnName returns
      *
-     * @param DataObject $record
+     * @param ViewableData $record
      * @param string $columnName
      * @return string|null - returns null if it could not found a value
+     * @deprecated 5.4.0 Will be removed without equivalent functionality to replace it in a future major release.
      */
     protected function getValueFromRelation($record, $columnName)
     {
+        Deprecation::notice('5.4.0', 'Will be removed without equivalent functionality to replace it in a future major release.');
         $fieldNameParts = explode('.', $columnName ?? '');
         $tmpItem = clone($record);
         for ($idx = 0; $idx < sizeof($fieldNameParts ?? []); $idx++) {
@@ -253,12 +292,24 @@ class GridFieldDataColumns extends AbstractGridFieldComponent implements GridFie
             // If the value is an object, we do one of two things
             if (method_exists($value, 'Nice')) {
                 // If it has a "Nice" method, call that & make sure the result is safe
-                $value = nl2br(Convert::raw2xml($value->Nice()) ?? '');
+                $value = $value->Nice();
+                if ($this->getDoEscapeFields()) {
+                    $value = nl2br(Convert::raw2xml($value));
+                }
             } else {
-                // Otherwise call forTemplate - the result of this should already be safe
-                $value = $value->forTemplate();
+                if (!$this->getDoEscapeFields()
+                    && is_a($value, DBField::class, false)
+                    && !is_a($value, DBHTMLText::class, false)
+                    && !is_a($value, DBHTMLVarchar::class, false)
+                ) {
+                    // For DBFields other than HTML variants, if we're not escaping values, get the raw value.
+                    $value = $value->RAW();
+                } else {
+                    // Otherwise, check forTemplate() which is assumed to be safe.
+                    $value = $value->forTemplate();
+                }
             }
-        } else {
+        } elseif ($this->getDoEscapeFields()) {
             // Otherwise, just treat as a text string & make sure the result is safe
             $value = nl2br(Convert::raw2xml($value) ?? '');
         }
@@ -269,7 +320,7 @@ class GridFieldDataColumns extends AbstractGridFieldComponent implements GridFie
     /**
      *
      * @param GridField $gridField
-     * @param DataObject $item
+     * @param ViewableData $item
      * @param string $fieldName
      * @param string $value
      * @return string

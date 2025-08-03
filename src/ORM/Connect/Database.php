@@ -234,9 +234,9 @@ abstract class Database
                 $sql = DB::inline_parameters($sql, $parameters);
             } elseif (strtolower($_REQUEST['showqueries'] ?? '') === 'whitelist') {
                 $displaySql = false;
-                foreach (self::$whitelist_array as $query => $searchType) {
-                    $fullQuery = ($searchType === self::FULL_QUERY && $query === $sql);
-                    $partialQuery = ($searchType === self::PARTIAL_QUERY && mb_strpos($sql ?? '', $query ?? '') !== false);
+                foreach (Database::$whitelist_array as $query => $searchType) {
+                    $fullQuery = ($searchType === Database::FULL_QUERY && $query === $sql);
+                    $partialQuery = ($searchType === Database::PARTIAL_QUERY && mb_strpos($sql ?? '', $query ?? '') !== false);
                     if (!$fullQuery && !$partialQuery) {
                         continue;
                     }
@@ -277,7 +277,7 @@ abstract class Database
      */
     public static function setWhitelistQueryArray($whitelistArray)
     {
-        self::$whitelist_array = $whitelistArray;
+        Database::$whitelist_array = $whitelistArray;
     }
 
     /**
@@ -287,7 +287,7 @@ abstract class Database
      */
     public static function getWhitelistQueryArray()
     {
-        return self::$whitelist_array;
+        return Database::$whitelist_array;
     }
 
     /**
@@ -954,4 +954,26 @@ abstract class Database
      * @return string Expression for a random value
      */
     abstract public function random();
+
+    /**
+     * Generate SQL for sorting by a specific field using CASE logic.
+     *
+     * Subclasses can override this method to provide optimized implementations
+     * (e.g., using MySQL's FIELD method).
+     *
+     * @param string $field The name of the field to sort by.
+     * @param array $values The values to order by.
+     * @return string SQL snippet for ordering.
+     */
+    public function sortByField(string $field, array $values): string
+    {
+        $caseStatements = [];
+        foreach ($values as $index => $value) {
+            $escaped = is_int($value) ? $value : "'" . addslashes($value) . "'";
+            $caseStatements[] = "WHEN \"{$field}\" = {$escaped} THEN {$index}";
+        }
+        $count = count($caseStatements);
+        $sqlCase = implode(' ', $caseStatements);
+        return "CASE {$sqlCase} ELSE {$count} END";
+    }
 }

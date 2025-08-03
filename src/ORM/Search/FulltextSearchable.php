@@ -20,7 +20,8 @@ use Exception;
  * CAUTION: Will make all files in your /assets folder searchable by file name
  * unless "File" is excluded from FulltextSearchable::enable().
  *
- * @see http://doc.silverstripe.org/framework/en/tutorials/4-site-search
+ * @template T of SiteTree|File
+ * @extends DataExtension<T>
  */
 class FulltextSearchable extends DataExtension
 {
@@ -76,7 +77,7 @@ class FulltextSearchable extends DataExtension
                 );
             }
         }
-        self::$searchable_classes = $searchableClasses;
+        FulltextSearchable::$searchable_classes = $searchableClasses;
         if (class_exists("SilverStripe\\CMS\\Controllers\\ContentController")) {
             ContentController::add_extension("SilverStripe\\CMS\\Search\\ContentControllerSearchExtension");
         }
@@ -119,6 +120,6 @@ class FulltextSearchable extends DataExtension
      */
     public static function get_searchable_classes()
     {
-        return self::$searchable_classes;
+        return FulltextSearchable::$searchable_classes;
     }
 }

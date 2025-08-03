@@ -27,9 +27,28 @@ eo:
   SilverStripe\Control\RequestProcessor:
     INVALID_REQUEST: 'Malvalida peto'
     REQUEST_ABORTED: 'Ĉesigis peton'
+  SilverStripe\Dev\Command\ConfigDump:
+    CAN_DEV_CONFIG_DESCRIPTION: 'Povas vidi je /dev/config'
+    CAN_DEV_CONFIG_HELP: 'Povas vidi la tutan aranĝon (/dev/config)'
+  SilverStripe\Dev\Command\DbBuild:
+    CAN_DEV_BUILD_DESCRIPTION: 'Povas ruli je /dev/build'
+    CAN_DEV_BUILD_HELP: 'Povas ruli la komandon konstrui (/dev/build)'
+  SilverStripe\Dev\DevBuildController:
+    CAN_DEV_BUILD_DESCRIPTION: 'Povas ruli je /dev/build'
+    CAN_DEV_BUILD_HELP: 'Povas ruli la komandon konstrui (/dev/build)'
+  SilverStripe\Dev\DevConfigController:
+    CAN_DEV_CONFIG_DESCRIPTION: 'Povas vidi je /dev/config'
+    CAN_DEV_CONFIG_HELP: 'Povas vidi la tutan aranĝon (/dev/config)'
   SilverStripe\Dev\DevConfirmationController:
     INFO_DESCRIPTION: 'Konfirmi eble danĝeran operacion'
     INFO_TITLE: 'Sekurecon konfirmi'
+  SilverStripe\Dev\DevelopmentAdmin:
+    ALL_DEV_ADMIN_DESCRIPTION: 'Povas vidi kaj ruli ĉiujn finpunktojn /dev'
+    ALL_DEV_ADMIN_HELP: 'Povas vidi kaj ruli ĉiujn finpunktojn /dev'
+    PERMISSIONS_CATEGORY: Dev-permesoj
+  SilverStripe\Dev\TaskRunner:
+    BUILDTASK_CAN_RUN_DESCRIPTION: 'Povas vidi kaj ruli ĉiujn taskojn /dev/tasks'
+    BUILDTASK_CAN_RUN_HELP: 'Povas vidi kaj ruli ĉiujn konstruajn taskojn (/dev/tasks). Unuopaj taskaj vidaj permesoj povas transpasi ĉi tiun permeson.'
   SilverStripe\Forms\CheckboxField:
     NOANSWER: Ne
     YESANSWER: Jes
@@ -42,6 +61,7 @@ eo:
     CURRENT_PASSWORD_MISSING: 'Vi devas enigi vian aktualan pasvorton.'
     LOGGED_IN_ERROR: 'Vi devas ensaluti por ŝanĝi vian pasvorton.'
     MAXIMUM: 'Pasvorto devas esti ne pli ol {min} signojn longa.'
+    RANDOM_IF_EMPTY: 'Se ĉi tiu estas vaka, tiam aŭtomate generiĝos hazarda pasvorto.'
     SHOWONCLICKTITLE: 'Ŝangi Pasvorton'
   SilverStripe\Forms\DateField:
     NOTSET: 'ne sendita'
@@ -104,7 +124,7 @@ eo:
     Create: Krei
     Delete: Forigi
     DeletePermissionsFailure: 'Mankas permeso forigi'
-    Deleted: 'Forigita {type} {name}'
+    Deleted: 'Forigita {tipo} "{nomo}"'
     Save: Konservi
     Saved: 'Konservita {name} {link}'
   SilverStripe\Forms\GridField\GridFieldDetailForm_ItemRequest:
@@ -112,12 +132,15 @@ eo:
     NEW: 'Aldoni novan rikordon'
     NEXT: 'Iri al la sekva rikordo'
     PREVIOUS: 'Iri al la antaŭa rikordo'
+    SAVEDUP: 'Konservis sukcese'
+    SAVETOASTMESSAGE: 'Konservis {tipo} "{titolo}" sukcese'
     ViewPermissionsFailure: 'Ŝajnas ke vi ne havas la bezonatajn permesojn por vidi je {ObjectTitle}'
   SilverStripe\Forms\GridField\GridFieldEditButton:
     EDIT: Redakti
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search: 'Serĉi por {name}'
     SearchFormFaliure: 'Ne eblis generi serĉan formularon'
+    Search_Default: Serĉi
   SilverStripe\Forms\GridField\GridFieldGroupDeleteAction:
     UnlinkSelfFailure: 'Ne povas forigi vin el ĉi tiu grupo; vi perdus administrajn rajtojn'
   SilverStripe\Forms\GridField\GridFieldPaginator:
@@ -139,12 +162,20 @@ eo:
   SilverStripe\Forms\NullableField:
     IsNullLabel: 'Estas senvalora'
   SilverStripe\Forms\NumericField:
-    VALIDATION: '''{value}'' ne estas numero, nur numeroj estas akcepteblaj por ĉi tiu kampo'
+    VALIDATION: "'{value}' ne estas numero, nur numeroj estas akcepteblaj por ĉi tiu kampo"
+  SilverStripe\Forms\SearchableDropdownTrait:
+    SELECT: Elekti...
+    SELECT_OR_TYPE_TO_SEARCH: 'Elekti aŭ tajpi por serĉi...'
+    TYPE_TO_SEARCH: 'Tajpi por serĉi...'
   SilverStripe\Forms\TextField:
     VALIDATEMAXLENGTH: 'La valoro por {name} devas ne havi longon pli ol {maxLength} signoj'
   SilverStripe\Forms\TimeField:
     VALIDATEFORMAT: 'Bonvole enigu validan horan formaton ({format})'
+  SilverStripe\Forms\UrlField:
+    INVALID: 'Bonvole enigu validan URL-on'
   SilverStripe\ORM\DataObject:
+    FILTER_WITHINRANGE_FROM: De
+    FILTER_WITHINRANGE_TO: Al
     GENERALSEARCH: 'Ĝenerala serĉo'
     PLURALNAME: 'Datumaj Objektoj'
     PLURALS:
@@ -183,13 +214,13 @@ eo:
     ANY: Ajna
   SilverStripe\ORM\FieldType\DBForeignKey:
     DROPDOWN_THRESHOLD_FALLBACK_MESSAGE: 'Tro multaj rilataj objektoj; retropaŝa kampo uzata'
-  SilverStripe\ORM\FieldType\DBString:
-    ELLIPSIS: …
   SilverStripe\ORM\Hierarchy:
     LIMITED_TITLE: 'Tro da idoj ({count})'
   SilverStripe\ORM\Hierarchy\Hierarchy:
     InfiniteLoopNotAllowed: 'Senfina iteracio troviĝis en la "{type}"-hierarkio. Bonvole ŝanĝu la patron por solvi tion.'
     LIMITED_TITLE: 'Tro da idoj ({count})'
+  SilverStripe\ORM\Search\SearchContextForm:
+    OpenFilter: 'Malfermi serĉon kaj filtrilon'
   SilverStripe\ORM\ValidationException:
     DEFAULT_ERROR: 'Validiga eraro'
   SilverStripe\Security\BasicAuth:
@@ -240,9 +271,7 @@ eo:
     ValidationIdentifierAlreadyExists: 'Jam ekzistas grupo  ({group}) kun la sama {identifier}'
     db_AccessAllSubsites: 'Aliri ĉiujn subretejojn'
     db_Code: Kodo
-    db_DN: DN
     db_Description: Priskribo
-    db_GUID: GUID
     db_HtmlEditorConfig: 'Agordi html-redaktilon'
     db_LastSynced: 'Laste sinkronigita'
     db_Locked: Ŝlosita
@@ -260,7 +289,9 @@ eo:
     db_CanEditType: 'Povas redakti tipon'
     db_CanViewType: 'Povas vidi tipon'
     many_many_EditorGroups: 'Grupoj de redaktantoj'
+    many_many_EditorMembers: 'Redaktantaj membroj'
     many_many_ViewerGroups: 'Grupoj de vidantoj'
+    many_many_ViewerMembers: 'Vidantaj membroj'
   SilverStripe\Security\LoginAttempt:
     Email: 'Retpoŝta adreso'
     EmailHashed: 'Retpoŝta adreso (haketa)'
@@ -272,7 +303,6 @@ eo:
     SINGULARNAME: 'Provo ensaluti'
     Status: Stato
     db_EmailHashed: 'Retpoŝto haketita'
-    db_IP: IP
     db_Status: Stato
     has_one_Member: Membro
   SilverStripe\Security\Member:
@@ -287,6 +317,7 @@ eo:
     CURRENT_PASSWORD: 'Aktuala pasvorto'
     EDIT_PASSWORD: 'Nova pasvorto'
     EMAIL: Retpoŝto
+    EMAIL_FAILED: 'Eraro okazis provante retpoŝti al vi pasvortan reagordan ligilon.'
     EMPTYNEWPASSWORD: 'La nova pasvorto ne povas esti nula, bonvole refaru'
     ENTEREMAIL: 'Bonvolu enigi retadreson por atingi ligilon por reagordi pasvorton.'
     ERRORLOCKEDOUT2: 'Via konto estas provizore malvalidigita pro troaj provoj ensaluti. Bonvole reprovu post {count} minutoj.'
@@ -326,7 +357,6 @@ eo:
     db_Email: Retpoŝto
     db_FailedLoginCount: 'Malsukcesis nombri ensaluton'
     db_FirstName: 'Persona nomo'
-    db_GUID: GUID
     db_HasSkippedMFARegistration: 'Registris je skippedMFA'
     db_IsExpired: Eksvalidiĝis
     db_LastSynced: 'Laste sinkronigita'
@@ -387,7 +417,6 @@ eo:
       other: '{count} permesoj'
     SINGULARNAME: Permeso
     UserPermissionsIntro: 'Atribui grupojn al la uzanto modifos iliajn permesojn. Vidu la grupan sekcion por detaloj de permesoj pri unuopa grupo.'
-    db_Arg: Arg
     db_Code: Kodo
     db_Type: Tipo
     has_one_Group: Grupo
@@ -444,5 +473,10 @@ eo:
     NOTERESETPASSWORD: 'Enigu vian retpoŝtan adreson kaj ni sendos al vi ligilon per kiu vi povas reagordi vian pasvorton'
     PASSWORDRESETSENTHEADER: 'Pasvorta reagorda ligilo sendiĝis'
     PASSWORDRESETSENTTEXT: 'Dankon. Reagorda ligilo sendiĝis, kondiĉe ke konto ekzistas por ĉi tiu retadreso.'
+  SilverStripe\Security\Validation\PasswordValidator:
+    PREVPASSWORD: 'Vi jam uzis tiun pasvorton pasintece, do bonvole elektu novan pasvorton'
+  SilverStripe\Security\Validation\RulesPasswordValidator:
+    LOWCHARSTRENGTH: 'Bonvole plifortigu la pasvortan aldonante la jenajn signojn: {chars}'
+    TOOSHORT: 'Pasvorto estas tro mallonga; ĝi devas esti almenaŭ {minimum} signojn longa'
   SilverStripe\View\Shortcodes\EmbedShortcodeProvider:
     INVALID_URL: 'Okazis problemo ŝargi la aŭdvidaĵon.'

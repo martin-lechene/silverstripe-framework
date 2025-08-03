@@ -364,6 +364,12 @@ SS;
         );
     }
 
+    public function testGlobalVariablesReturnNull()
+    {
+        $this->assertEquals('<p></p>', $this->render('<p>$SSViewerTest_GlobalReturnsNull</p>'));
+        $this->assertEquals('<p></p>', $this->render('<p>$SSViewerTest_GlobalReturnsNull.Chained.Properties</p>'));
+    }
+
     public function testCoreGlobalVariableCalls()
     {
         $this->assertEquals(
@@ -497,6 +503,15 @@ SS;
             "testLocalFunctionPriorityCalled",
             $result,
             "Local Object's public function called. Did not return the actual baseURL of the current site"
+        );
+    }
+
+    public function testCurrentScopeLoop(): void
+    {
+        $data = new ArrayList([['Val' => 'one'], ['Val' => 'two'], ['Val' => 'three']]);
+        $this->assertEqualIgnoringWhitespace(
+            'one two three',
+            $this->render('<% loop %>$Val<% end_loop %>', $data)
         );
     }
 
@@ -1465,6 +1480,37 @@ after'
         $this->assertEquals("", $result, "Only numbers that are multiples of 11 are returned. I.e. nothing returned");
     }
 
+    public function testSSViewerBasicIteratorSupportWithPaginatedList()
+    {
+        $list = new ArrayList([
+            ['Val' => 1],
+            ['Val' => 2],
+            ['Val' => 3],
+            ['Val' => 4],
+            ['Val' => 5],
+            ['Val' => 6],
+        ]);
+        $paginatedList = new PaginatedList($list);
+        $paginatedList->setPageLength(2);
+        $data = new ArrayData([
+            'PaginatedList' => $paginatedList
+        ]);
+
+        $result = $this->render('<% loop PaginatedList %><% if $IsFirst %>$Val<% end_if %><% end_loop %>', $data);
+        $this->assertEquals("1", $result, "Only the first item on the first page is rendered");
+
+        $result = $this->render('<% loop PaginatedList %><% if $IsLast %>$Val<% end_if %><% end_loop %>', $data);
+        $this->assertEquals("2", $result, "Only the last item on the first page is rendered");
+
+        $paginatedList->setCurrentPage(2);
+
+        $result = $this->render('<% loop PaginatedList %><% if $IsFirst %>$Val<% end_if %><% end_loop %>', $data);
+        $this->assertEquals("3", $result, "Only the first item on the second page is rendered");
+
+        $result = $this->render('<% loop PaginatedList %><% if $IsLast %>$Val<% end_if %><% end_loop %>', $data);
+        $this->assertEquals("4", $result, "Only the last item on the second page is rendered");
+    }
+
     /**
      * Test $Up works when the scope $Up refers to was entered with a "with" block
      */
@@ -2217,5 +2263,17 @@ EOC;
         $this->render($content, null, true);
         $this->assertTrue(file_exists($cacheFile ?? ''), 'Cache file wasn\'t created when it was meant to');
         unlink($cacheFile ?? '');
+    }
+
+    public function testPrimitivesConvertedToDBFields()
+    {
+        $data = new ArrayData([
+            // null value should not be rendered, though should also not throw exception
+            'Foo' => new ArrayList(['hello', true, 456, 7.89, null])
+        ]);
+        $this->assertEqualIgnoringWhitespace(
+            'hello 1 456 7.89',
+            $this->render('<% loop $Foo %>$Me<% end_loop %>', $data)
+        );
     }
 }

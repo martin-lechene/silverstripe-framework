@@ -1,7 +1,6 @@
 uk:
   SilverStripe\AssetAdmin\Forms\UploadField:
     Dimensions: Розміри
-    EDIT: Edit
     EDITINFO: 'Редагувати цей файл'
   SilverStripe\Control\ChangePasswordEmail_ss:
     CHANGEPASSWORDTEXT1: 'Ви змінили свій пароль для'
@@ -39,17 +38,15 @@ uk:
     Delete: Видалити
     Save: Зберегти
     Saved: 'Збережено {name} {link}'
-  SilverStripe\Forms\GridField\GridFieldEditButton:
-    EDIT: Edit
+  SilverStripe\Forms\GridField\GridFieldFilterHeader:
+    Search_Default: Пошук
   SilverStripe\Forms\GridField\GridFieldPaginator:
     Page: Сторінка
-    View: View
-  SilverStripe\Forms\GridField\GridFieldViewButton:
-    VIEW: View
   SilverStripe\Forms\MoneyField:
     FIELDLABELAMOUNT: Кількість
     FIELDLABELCURRENCY: Валюта
   SilverStripe\ORM\DataObject:
+    FILTER_WITHINRANGE_FROM: Від
     PLURALNAME: 'Об’єкти даних'
     SINGULARNAME: 'Об’єкт даних'
   SilverStripe\ORM\FieldType\DBBoolean:
@@ -57,9 +54,9 @@ uk:
   SilverStripe\ORM\FieldType\DBEnum:
     ANY: Будь-який
   SilverStripe\Security\BasicAuth:
-    ENTERINFO: 'Будь ласка, введіть ім''я користувача та пароль.'
+    ENTERINFO: "Будь ласка, введіть ім'я користувача та пароль."
     ERRORNOTADMIN: 'Цей користувач не є адміністратором.'
-    ERRORNOTREC: 'Таке ім''я користувача / пароль не існує'
+    ERRORNOTREC: "Таке ім'я користувача / пароль не існує"
   SilverStripe\Security\Confirmation\Form:
     REFUSE: Відмінити
   SilverStripe\Security\Group:
@@ -94,7 +91,7 @@ uk:
     ENTEREMAIL: 'Введіть, будь-ласка, електронну адресу щоб отримати посилання для відновлення паролю.'
     ERRORNEWPASSWORD: 'Ви ввели новий пароль із відмінностями, спробуйте знову'
     ERRORPASSWORDNOTMATCH: 'Ваш теперішній пароль не збігається, будь ласка, повторіть'
-    FIRSTNAME: 'Ім''я'
+    FIRSTNAME: "Ім'я"
     INTERFACELANG: 'Мова Інтерфейсу'
     NEWPASSWORD: 'Новий пароль'
     PASSWORD: Пароль

@@ -45,13 +45,13 @@ class ValidatorTest extends SapphireTest
         $form->setValidator($validator); // Setup validator now that we've got our form.
         $form->loadDataFrom($data); // Put data into the form so the validator can pull it back out again.
 
-        $result = $form->validationResult();
+        $result = $form->validate();
         $this->assertFalse($result->isValid());
         $this->assertCount(1, $result->getMessages());
 
         // Make sure it doesn't fail after removing validation AND has no errors (since calling validate should reset errors).
         $validator->removeValidation();
-        $result = $form->validationResult();
+        $result = $form->validate();
         $this->assertTrue($result->isValid());
         $this->assertEmpty($result->getMessages());
     }

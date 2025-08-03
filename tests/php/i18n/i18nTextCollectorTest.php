@@ -709,8 +709,61 @@ PHP;
                     'other' => '{count} My Objects',
                 ],
                 'SilverStripe\i18n\Tests\i18nTest\MyObject.SINGULARNAME' => 'My Object',
+                'SilverStripe\i18n\Tests\i18nTest\MyObject.CLASS_DESCRIPTION' => 'A class that represents objects',
             ],
             $matches
+        );
+    }
+
+    public function testCollectFromAnonymousMethod()
+    {
+        $c = i18nTextCollector::create();
+        $mymodule = ModuleLoader::inst()->getManifest()->getModule('i18ntestmodule');
+        $php = <<<PHP
+<?php
+namespace SilverStripe\Framework\Core;
+
+class MyClass
+{
+    public function getNewLines(\$class) {
+        Deprecation::withSuppressedNotice(function () {
+            \$this->someMethod(_t(
+                MyClass::class . '.SOMETHING_A',
+                'something a',
+            ));
+        });
+    }
+
+    public function getNewLinesWithSomething(\$class, \$something) {
+        Deprecation::withSuppressedNotice(function () use (\$something) {
+            \$this->someMethod(_t(
+                MyClass::class . '.SOMETHING_B',
+                'something {something}',
+                ['something' => \$something]
+            ));
+        });
+    }
+
+    public function getNewLinesWithSomething(\$class, \$something) {
+        Deprecation::withSuppressedNotice(function (
+            \$myparam
+        ) use (\$something) {
+            \$this->someMethod(_t(
+                MyClass::class . '.SOMETHING_C',
+                'something {something} {myparam}',
+                ['something' => \$something, 'myparam' => \$myparam]
+            ));
+        });
+    }
+}
+PHP;
+        $this->assertEquals(
+            [
+                'SilverStripe\\Framework\\Core\\MyClass.SOMETHING_A' => "something a",
+                'SilverStripe\\Framework\\Core\\MyClass.SOMETHING_B' => "something {something}",
+                'SilverStripe\\Framework\\Core\\MyClass.SOMETHING_C' => "something {something} {myparam}",
+            ],
+            $c->collectFromCode($php, null, $mymodule)
         );
     }
 
@@ -921,5 +974,80 @@ PHP;
         $this->assertArrayHasKey("{$otherRoot}/code/i18nProviderClass.php", $otherFiles);
         $this->assertArrayHasKey("{$otherRoot}/code/i18nTestModuleDecorator.php", $otherFiles);
         $this->assertArrayHasKey("{$otherRoot}/templates/i18nOtherModule.ss", $otherFiles);
+    }
+
+    public function testItCanCollectVariables()
+    {
+        $c = i18nTextCollector::create();
+        $mymodule = ModuleLoader::inst()->getManifest()->getModule('i18ntestmodule');
+
+        $php = <<<'PHP'
+        $zeroval = "0"; // it can collect "falsy" values
+        $concatagain = "t";;;; // lots of semicolons shouldn't cause any issue
+        $concatagain .= "est";
+        $concatdouble = "t" . "est" . "";
+        $concat = 't' . 'e' . 's'
+            . 't' ; // we can use concatenation for readibility
+        $str = 'wrong';
+        $str = 'test'; // value can be overwritten later
+        _t('TestEntity.ZEROVAL', $zeroval);
+        _t('TestEntity.CONCATAGAIN', $concatagain);
+        _t('TestEntity.CONCATDBLKEY', $concatdouble);
+        _t('TestEntity.CONCATKEY', $concat);
+        _t('TestEntity.VARKEY', $str);
+        _t('TestEntity.REGULARKEY', 'test');
+PHP;
+
+        $collectedTranslatables = $c->collectFromCode($php, null, $mymodule);
+        $this->assertEquals([
+            'TestEntity.ZEROVAL' => "0",
+            'TestEntity.CONCATAGAIN' => "test",
+            'TestEntity.CONCATDBLKEY' => "test",
+            'TestEntity.CONCATKEY' => "test",
+            'TestEntity.VARKEY' => "test",
+            'TestEntity.REGULARKEY' => "test",
+        ], $collectedTranslatables);
+    }
+
+    public function testItCanUseVariableAsContext()
+    {
+        $c = i18nTextCollector::create();
+        $mymodule = ModuleLoader::inst()->getManifest()->getModule('i18ntestmodule');
+
+        $php = <<<'PHP'
+        $args = ['type' => 'var'];
+        _t('TestEntity.VARCONTEXT', 'test {type}', $args);
+        _t('TestEntity.VARIADICCONTEXT', 'test {type}', ...$args);
+        _t('TestEntity.REGULARCONTEXT', 'test {type}', ['type' => 'var']);
+PHP;
+
+        $collectedTranslatables = $c->collectFromCode($php, null, $mymodule);
+        $this->assertEquals([
+            'TestEntity.VARCONTEXT' => "test {type}",
+            'TestEntity.VARIADICCONTEXT' => "test {type}",
+            'TestEntity.REGULARCONTEXT' => "test {type}",
+        ], $collectedTranslatables);
+    }
+
+    public function testDoesNotCollectInvalidKeys()
+    {
+        // From the code below this will previously collect `'.' => 'generic'`
+        // Code was added to i18nTextCollector::collectFromCode() to ignore keys
+        // that end with "."
+        $c = i18nTextCollector::create();
+        $mymodule = ModuleLoader::inst()->getManifest()->getModule('i18ntestmodule');
+        $php = <<<'PHP'
+        $data = [
+            $foo,
+            static::get_something($foo),
+            'generic'
+        ];
+        _t(
+            __CLASS__ . '.' . ucfirst($foo) . 'Type',
+            $hello[$foo]
+        );
+        PHP;
+        $collectedTranslatables = $c->collectFromCode($php, null, $mymodule);
+        $this->assertEmpty($collectedTranslatables);
     }
 }

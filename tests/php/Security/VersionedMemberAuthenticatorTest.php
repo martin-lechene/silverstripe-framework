@@ -6,6 +6,7 @@ use SilverStripe\Control\Controller;
 use SilverStripe\Control\NullHTTPRequest;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
+use SilverStripe\Dev\Deprecation;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\ORM\ValidationResult;
@@ -42,10 +43,20 @@ class VersionedMemberAuthenticatorTest extends SapphireTest
             return;
         }
 
+        // Explicity add the Versioned extension to Member, even though it's already in $required_extensions.
+        // This is done to call `unset(self::class::$extra_methods[strtolower($subclass)]);` in
+        // Extensible::add_extension() so when CustomMethods::getExtraMethodConfig() updates the $extra_methods
+        // it will include methods of Versioned such as publishSingle()
+        // This issue will only occur when running subsequent unit test classes in the same process, rather than this
+        // this unit test class in isolation
+        Member::add_extension(Versioned::class);
+
         // Enforce dummy validation (this can otherwise be influenced by recipe config)
-        PasswordValidator::singleton()
+        Deprecation::withSuppressedNotice(
+            fn() => PasswordValidator::singleton()
             ->setMinLength(0)
-            ->setTestNames([]);
+            ->setTestNames([])
+        );
     }
 
     protected function tearDown(): void

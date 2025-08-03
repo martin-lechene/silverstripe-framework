@@ -3,6 +3,7 @@
 namespace SilverStripe\Forms;
 
 use BadMethodCallException;
+use SilverStripe\Admin\LeftAndMain;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HasRequestHandler;
 use SilverStripe\Control\HTTPRequest;
@@ -12,7 +13,6 @@ use SilverStripe\Control\RequestHandler;
 use SilverStripe\Control\Session;
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\Core\Injector\Injector;
-use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DataObjectInterface;
 use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\ORM\ValidationResult;
@@ -21,6 +21,11 @@ use SilverStripe\Security\SecurityToken;
 use SilverStripe\View\AttributesHTML;
 use SilverStripe\View\SSViewer;
 use SilverStripe\View\ViewableData;
+use SilverStripe\Dev\Deprecation;
+use SilverStripe\Security\SudoMode\SudoModeServiceInterface;
+use SilverStripe\Forms\GridField\GridFieldDetailForm_ItemRequest;
+use SilverStripe\Forms\GridField\GridField;
+use SilverStripe\Forms\GridField\GridFieldViewButton;
 
 /**
  * Base class for all forms.
@@ -136,7 +141,7 @@ class Form extends ViewableData implements HasRequestHandler
     /**
      * Populated by {@link loadDataFrom()}.
      *
-     * @var DataObject|null
+     * @var ViewableData|null
      */
     protected $record;
 
@@ -267,6 +272,8 @@ class Form extends ViewableData implements HasRequestHandler
      */
     protected $notifyUnsavedChanges = false;
 
+    private bool $formRequiresSudoMode = false;
+
     /**
      * Create a new form, with the given fields an action buttons.
      *
@@ -279,7 +286,7 @@ class Form extends ViewableData implements HasRequestHandler
      */
     public function __construct(
         RequestHandler $controller = null,
-        $name = self::DEFAULT_NAME,
+        $name = Form::DEFAULT_NAME,
         FieldList $fields = null,
         FieldList $actions = null,
         Validator $validator = null
@@ -318,6 +325,66 @@ class Form extends ViewableData implements HasRequestHandler
     }
 
     /**
+     * Make the form require sudo mode, which will make the form readonly and add a sudo mode password field
+     * unless the current user previously activated sudo mode.
+     *
+     * Note that if the parent request handler for this form isn't LeftAndMain or GridFieldDetailForm_ItemRequest,
+     * sudo mode will not be required by this form.
+     */
+    public function requireSudoMode(): void
+    {
+        // Check that the current request handler for the form is one that's used
+        // in an admin context where sudo mode makes sense
+        $classes = [
+            LeftAndMain::class,
+            GridFieldDetailForm_ItemRequest::class,
+        ];
+        $enableSudoMode = false;
+        foreach ($classes as $class) {
+            if (is_a($this->getController(), $class)) {
+                $enableSudoMode = true;
+                break;
+            }
+        }
+        if (!$enableSudoMode) {
+            return;
+        }
+        // Check if sudo mode is currently enabled
+        $service = Injector::inst()->get(SudoModeServiceInterface::class);
+        $session = $this->getRequest()->getSession();
+        if ($service->check($session)) {
+            return;
+        }
+        // If sudo mode is not active, make the form readonly and add a sudo mode password field
+        // assuming that wasn't already there
+        $this->makeReadonly();
+        $hasSudoModeField = false;
+        foreach ($this->Fields() as $field) {
+            if (is_a($field, SudoModePasswordField::class)) {
+                $hasSudoModeField = true;
+                break;
+            }
+        }
+        if (!$hasSudoModeField) {
+            $field = SudoModePasswordField::create();
+            // Manually call setForm() to the field as the field list is being updated after the
+            // form is created, which is when setForm() is normally being created
+            $field->setForm($this);
+            $this->Fields()->unshift($field);
+        }
+        $this->formRequiresSudoMode = true;
+    }
+
+    /**
+     * Whether the form requires sudo mode.
+     * Note this is different from DataObject::getRequireSudoMode() which checks configuration instead
+     */
+    public function getFormRequiresSudoMode(): bool
+    {
+        return $this->formRequiresSudoMode;
+    }
+
+    /**
      * @return bool
      */
     public function getNotifyUnsavedChanges()
@@ -349,7 +416,7 @@ class Form extends ViewableData implements HasRequestHandler
         // load data in from previous submission upon error
         $data = $this->getSessionData();
         if (isset($data)) {
-            $this->loadDataFrom($data, self::MERGE_AS_INTERNAL_VALUE);
+            $this->loadDataFrom($data, Form::MERGE_AS_INTERNAL_VALUE);
         }
         return $this;
     }
@@ -371,7 +438,7 @@ class Form extends ViewableData implements HasRequestHandler
     /**
      * Helper to get current request for this form
      *
-     * @return HTTPRequest
+     * @return HTTPRequest|null
      */
     protected function getRequest()
     {
@@ -426,7 +493,7 @@ class Form extends ViewableData implements HasRequestHandler
     /**
      * Return any ValidationResult instance stored for this object
      *
-     * @return ValidationResult The ValidationResult object stored in the session
+     * @return ValidationResult|null The ValidationResult object stored in the session
      */
     public function getSessionValidationResult()
     {
@@ -537,7 +604,7 @@ class Form extends ViewableData implements HasRequestHandler
      */
     protected function setupDefaultClasses()
     {
-        $defaultClasses = self::config()->get('default_classes');
+        $defaultClasses = static::config()->get('default_classes');
         if ($defaultClasses) {
             foreach ($defaultClasses as $class) {
                 $this->addExtraClass($class);
@@ -561,7 +628,7 @@ class Form extends ViewableData implements HasRequestHandler
      * in which case the default form behaviour will kick in.
      *
      * @param $callback
-     * @return self
+     * @return Form
      */
     public function setValidationResponseCallback($callback)
     {
@@ -955,12 +1022,12 @@ class Form extends ViewableData implements HasRequestHandler
         if ($fields = $this->fields->dataFields()) {
             foreach ($fields as $field) {
                 if ($field instanceof FileField) {
-                    return self::ENC_TYPE_MULTIPART;
+                    return Form::ENC_TYPE_MULTIPART;
                 }
             }
         }
 
-        return self::ENC_TYPE_URLENCODED;
+        return Form::ENC_TYPE_URLENCODED;
     }
 
     /**
@@ -1183,6 +1250,14 @@ class Form extends ViewableData implements HasRequestHandler
      */
     public function sessionMessage($message, $type = ValidationResult::TYPE_ERROR, $cast = ValidationResult::CAST_TEXT)
     {
+        if ($cast === null) {
+            Deprecation::notice(
+                '5.4.0',
+                'Passing $cast as null is deprecated. Pass a ValidationResult::CAST_* constant instead in a future major release.',
+                Deprecation::SCOPE_GLOBAL
+            );
+            $cast = ValidationResult::CAST_TEXT;
+        }
         $this->setMessage($message, $type, $cast);
         $result = $this->getSessionValidationResult() ?: ValidationResult::create();
         $result->addMessage($message, $type, null, $cast);
@@ -1199,6 +1274,14 @@ class Form extends ViewableData implements HasRequestHandler
      */
     public function sessionError($message, $type = ValidationResult::TYPE_ERROR, $cast = ValidationResult::CAST_TEXT)
     {
+        if ($cast === null) {
+            Deprecation::notice(
+                '5.4.0',
+                'Passing $cast as null is deprecated. Pass a ValidationResult::CAST_* constant instead in a future major release.',
+                Deprecation::SCOPE_GLOBAL
+            );
+            $cast = ValidationResult::CAST_TEXT;
+        }
         $this->setMessage($message, $type, $cast);
         $result = $this->getSessionValidationResult() ?: ValidationResult::create();
         $result->addError($message, $type, null, $cast);
@@ -1216,6 +1299,14 @@ class Form extends ViewableData implements HasRequestHandler
      */
     public function sessionFieldError($message, $fieldName, $type = ValidationResult::TYPE_ERROR, $cast = ValidationResult::CAST_TEXT)
     {
+        if ($cast === null) {
+            Deprecation::notice(
+                '5.4.0',
+                'Passing $cast as null is deprecated. Pass a ValidationResult::CAST_* constant instead in a future major release.',
+                Deprecation::SCOPE_GLOBAL
+            );
+            $cast = ValidationResult::CAST_TEXT;
+        }
         $this->setMessage($message, $type, $cast);
         $result = $this->getSessionValidationResult() ?: ValidationResult::create();
         $result->addFieldMessage($fieldName, $message, $type, null, $cast);
@@ -1223,10 +1314,10 @@ class Form extends ViewableData implements HasRequestHandler
     }
 
     /**
-     * Returns the DataObject that has given this form its data
+     * Returns the record that has given this form its data
      * through {@link loadDataFrom()}.
      *
-     * @return DataObject
+     * @return ViewableData
      */
     public function getRecord()
     {
@@ -1245,6 +1336,18 @@ class Form extends ViewableData implements HasRequestHandler
     }
 
     /**
+     * Alias of validate() for backwards compatibility.
+     *
+     * @return ValidationResult
+     * @deprecated 5.4.0 Use validate() instead
+     */
+    public function validationResult()
+    {
+        Deprecation::notice('5.4.0', 'Use validate() instead');
+        return $this->validate();
+    }
+
+    /**
      * Processing that occurs before a form is executed.
      *
      * This includes form validation, if it fails, we throw a ValidationException
@@ -1255,13 +1358,10 @@ class Form extends ViewableData implements HasRequestHandler
      *
      * Triggered through {@link httpSubmission()}.
      *
-     *
      * Note that CSRF protection takes place in {@link httpSubmission()},
      * if it fails the form data will never reach this method.
-     *
-     * @return ValidationResult
-     */
-    public function validationResult()
+    */
+    public function validate(): ValidationResult
     {
         // Automatically pass if there is no validator, or the clicked button is exempt
         // Note: Soft support here for validation with absent request handler
@@ -1285,7 +1385,7 @@ class Form extends ViewableData implements HasRequestHandler
     const MERGE_AS_SUBMITTED_VALUE  = 0b1000;
 
     /**
-     * Load data from the given DataObject or array.
+     * Load data from the given record or array.
      *
      * It will call $object->MyField to get the value of MyField.
      * If you passed an array, it will call $object[MyField].
@@ -1306,7 +1406,7 @@ class Form extends ViewableData implements HasRequestHandler
      * @uses FormField::setSubmittedValue()
      * @uses FormField::setValue()
      *
-     * @param array|DataObject $data
+     * @param array|ViewableData $data
      * @param int $mergeStrategy
      *  For every field, {@link $data} is interrogated whether it contains a relevant property/key, and
      *  what that property/key's value is.
@@ -1328,9 +1428,6 @@ class Form extends ViewableData implements HasRequestHandler
      *  do not want them parsed as submitted data. MERGE_AS_SUBMITTED_VALUE does the opposite and forces the data to be
      *  parsed as it would be submitted from a form.
      *
-     *  For backwards compatibility reasons, this parameter can also be set to === true, which is the same as passing
-     *  MERGE_CLEAR_MISSING
-     *
      * @param array $fieldList An optional list of fields to process.  This can be useful when you have a
      * form that has some fields that save to one object, and some that save to another.
      * @return $this
@@ -1344,14 +1441,26 @@ class Form extends ViewableData implements HasRequestHandler
 
         // Handle the backwards compatible case of passing "true" as the second argument
         if ($mergeStrategy === true) {
-            $mergeStrategy = self::MERGE_CLEAR_MISSING;
+            Deprecation::notice(
+                '5.4.0',
+                'Passing `true` to the $mergeStrategy argument in ' . Form::class . '::loadDataFrom() is deprecated.'
+                    . ' Pass ' . Form::class . '::MERGE_CLEAR_MISSING instead.',
+                Deprecation::SCOPE_GLOBAL
+            );
+            $mergeStrategy = Form::MERGE_CLEAR_MISSING;
         } elseif ($mergeStrategy === false) {
+            Deprecation::notice(
+                '5.4.0',
+                'Passing `false` to the $mergeStrategy argument in ' . Form::class . '::loadDataFrom() is deprecated.'
+                    . ' Pass 0 instead.',
+                Deprecation::SCOPE_GLOBAL
+            );
             $mergeStrategy = 0;
         }
 
         // If an object is passed, save it for historical reference through {@link getRecord()}
         // Also use this to determine if we are loading a submitted form, or loading
-        // from a dataobject
+        // from a record
         $submitted = true;
         if (is_object($data)) {
             $this->record = $data;
@@ -1360,9 +1469,9 @@ class Form extends ViewableData implements HasRequestHandler
 
         // Using the `MERGE_AS_INTERNAL_VALUE` or `MERGE_AS_SUBMITTED_VALUE` flags users can explicitly specify which
         // `setValue` method to use.
-        if (($mergeStrategy & self::MERGE_AS_INTERNAL_VALUE) == self::MERGE_AS_INTERNAL_VALUE) {
+        if (($mergeStrategy & Form::MERGE_AS_INTERNAL_VALUE) == Form::MERGE_AS_INTERNAL_VALUE) {
             $submitted = false;
-        } elseif (($mergeStrategy & self::MERGE_AS_SUBMITTED_VALUE) == self::MERGE_AS_SUBMITTED_VALUE) {
+        } elseif (($mergeStrategy & Form::MERGE_AS_SUBMITTED_VALUE) == Form::MERGE_AS_SUBMITTED_VALUE) {
             $submitted = true;
         }
 
@@ -1373,7 +1482,6 @@ class Form extends ViewableData implements HasRequestHandler
             return $this;
         }
 
-        /** @var FormField $field */
         foreach ($dataFields as $field) {
             $name = $field->getName();
 
@@ -1457,10 +1565,10 @@ class Form extends ViewableData implements HasRequestHandler
             // save to the field if either a value is given, or loading of blank/undefined values is forced
             $setValue = false;
             if ($exists) {
-                if ($val != false || ($mergeStrategy & self::MERGE_IGNORE_FALSEISH) != self::MERGE_IGNORE_FALSEISH) {
+                if ($val != false || ($mergeStrategy & Form::MERGE_IGNORE_FALSEISH) != Form::MERGE_IGNORE_FALSEISH) {
                     $setValue = true;
                 }
-            } elseif (($mergeStrategy & self::MERGE_CLEAR_MISSING) == self::MERGE_CLEAR_MISSING) {
+            } elseif (($mergeStrategy & Form::MERGE_CLEAR_MISSING) == Form::MERGE_CLEAR_MISSING) {
                 $setValue = true;
             }
 
@@ -1480,8 +1588,8 @@ class Form extends ViewableData implements HasRequestHandler
      * Save the contents of this form into the given data object.
      * It will make use of setCastedField() to do this.
      *
-     * @param DataObjectInterface $dataObject The object to save data into
-     * @param FieldList $fieldList An optional list of fields to process.  This can be useful when you have a
+     * @param ViewableData&DataObjectInterface $dataObject The object to save data into
+     * @param array<string>|null $fieldList An optional list of fields to process.  This can be useful when you have a
      * form that has some fields that save to one object, and some that save to another.
      */
     public function saveInto(DataObjectInterface $dataObject, $fieldList = null)
@@ -1523,7 +1631,7 @@ class Form extends ViewableData implements HasRequestHandler
      * {@link FieldList->dataFields()}, which filters out
      * any form-specific data like form-actions.
      * Calls {@link FormField->dataValue()} on each field,
-     * which returns a value suitable for insertion into a DataObject
+     * which returns a value suitable for insertion into a record
      * property.
      *
      * @return array
@@ -1534,7 +1642,6 @@ class Form extends ViewableData implements HasRequestHandler
         $data = [];
 
         if ($dataFields) {
-            /** @var FormField $field */
             foreach ($dataFields as $field) {
                 if ($field->getName()) {
                     $data[$field->getName()] = $field->dataValue();
@@ -1613,7 +1720,7 @@ class Form extends ViewableData implements HasRequestHandler
      * Return the default button that should be clicked when another one isn't
      * available.
      *
-     * @return FormAction
+     * @return FormAction|null
      */
     public function defaultAction()
     {

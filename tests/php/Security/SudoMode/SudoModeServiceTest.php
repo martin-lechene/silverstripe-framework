@@ -61,7 +61,7 @@ class SudoModeServiceTest extends SapphireTest
         $this->assertTrue($this->service->check($this->session));
     }
 
-    public function testSudoModeActivatesOnLogin()
+    public function testSudoModeNotActiveOnLogin()
     {
         // Sometimes being logged in carries over from other tests
         $this->logOut();
@@ -73,9 +73,9 @@ class SudoModeServiceTest extends SapphireTest
         // Sudo mode should not be enabled automagically when nobody is logged in
         $this->assertFalse($service->check($session));
 
-        // Ensure sudo mode is activated on login
+        // Ensure sudo mode is not automatically activated on login
         $this->logInWithPermission();
-        $this->assertTrue($service->check($session));
+        $this->assertFalse($service->check($session));
 
         // Ensure sudo mode is not active after logging out
         $this->logOut();

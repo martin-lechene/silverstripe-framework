@@ -8,10 +8,13 @@ use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\Connect\MySQLDatabase;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\DataQuery;
 use SilverStripe\ORM\DB;
 use SilverStripe\ORM\EagerLoadedList;
 use SilverStripe\ORM\ManyManyThroughList;
+use SilverStripe\ORM\SS_List;
 use SilverStripe\ORM\Tests\DataListTest\EagerLoading\EagerLoadObject;
+use SilverStripe\ORM\Tests\DataListTest\EagerLoading\EagerLoadSubClassObject;
 use SilverStripe\ORM\Tests\DataListTest\EagerLoading\HasOneEagerLoadObject;
 use SilverStripe\ORM\Tests\DataListTest\EagerLoading\HasOneSubEagerLoadObject;
 use SilverStripe\ORM\Tests\DataListTest\EagerLoading\HasOneSubSubEagerLoadObject;
@@ -33,6 +36,9 @@ use SilverStripe\ORM\Tests\DataListTest\EagerLoading\ManyManyThroughSubEagerLoad
 use SilverStripe\ORM\Tests\DataListTest\EagerLoading\BelongsManyManyEagerLoadObject;
 use SilverStripe\ORM\Tests\DataListTest\EagerLoading\BelongsManyManySubEagerLoadObject;
 use SilverStripe\ORM\Tests\DataListTest\EagerLoading\BelongsManyManySubSubEagerLoadObject;
+use SilverStripe\ORM\Tests\DataListTest\EagerLoading\MixedBackwardsHasManyEagerLoadObject;
+use SilverStripe\ORM\Tests\DataListTest\EagerLoading\MixedBackwardsHasOneEagerLoadObject;
+use SilverStripe\ORM\Tests\DataListTest\EagerLoading\MixedBackwardsManyManyEagerLoadObject;
 use SilverStripe\ORM\Tests\DataListTest\EagerLoading\MixedHasManyEagerLoadObject;
 use SilverStripe\ORM\Tests\DataListTest\EagerLoading\MixedHasOneEagerLoadObject;
 use SilverStripe\ORM\Tests\DataListTest\EagerLoading\MixedManyManyEagerLoadObject;
@@ -43,7 +49,7 @@ class DataListEagerLoadingTest extends SapphireTest
 
     private const SHOW_QUERIES_RESET = 'SET_TO_THIS_VALUE_WHEN_FINISHED';
 
-    private $showQueries = self::SHOW_QUERIES_RESET;
+    private $showQueries = DataListEagerLoadingTest::SHOW_QUERIES_RESET;
 
     public static function getExtraDataObjects()
     {
@@ -73,6 +79,9 @@ class DataListEagerLoadingTest extends SapphireTest
             MixedHasManyEagerLoadObject::class,
             MixedHasOneEagerLoadObject::class,
             MixedManyManyEagerLoadObject::class,
+            MixedBackwardsHasOneEagerLoadObject::class,
+            MixedBackwardsHasManyEagerLoadObject::class,
+            MixedBackwardsManyManyEagerLoadObject::class,
         ];
     }
 
@@ -119,7 +128,7 @@ class DataListEagerLoadingTest extends SapphireTest
      */
     private function startCountingSelectQueries(): void
     {
-        if ($this->showQueries !== self::SHOW_QUERIES_RESET) {
+        if ($this->showQueries !== DataListEagerLoadingTest::SHOW_QUERIES_RESET) {
             throw new LogicException('showQueries wasnt reset, you did something wrong');
         }
         $this->showQueries = $_REQUEST['showqueries'] ?? null;
@@ -148,7 +157,7 @@ class DataListEagerLoadingTest extends SapphireTest
      */
     private function resetShowQueries(): void
     {
-        if ($this->showQueries === self::SHOW_QUERIES_RESET) {
+        if ($this->showQueries === DataListEagerLoadingTest::SHOW_QUERIES_RESET) {
             return;
         }
         if ($this->showQueries) {
@@ -156,7 +165,7 @@ class DataListEagerLoadingTest extends SapphireTest
         } else {
             unset($_REQUEST['showqueries']);
         }
-        $this->showQueries = self::SHOW_QUERIES_RESET;
+        $this->showQueries = DataListEagerLoadingTest::SHOW_QUERIES_RESET;
     }
 
     /**
@@ -186,154 +195,175 @@ class DataListEagerLoadingTest extends SapphireTest
             [
                 'iden' => 'lazy-load',
                 'eagerLoad' => [],
-                'expected' => 83
+                'expected' => 91
             ],
             [
                 'iden' => 'has-one-a',
                 'eagerLoad' => [
                     'HasOneEagerLoadObject',
                 ],
-                'expected' => 82
+                'expected' => 90
             ],
             [
                 'iden' => 'has-one-b',
                 'eagerLoad' => [
                     'HasOneEagerLoadObject.HasOneSubEagerLoadObject',
                 ],
-                'expected' => 81
+                'expected' => 89
             ],
             [
                 'iden' => 'has-one-c',
                 'eagerLoad' => [
                     'HasOneEagerLoadObject.HasOneSubEagerLoadObject.HasOneSubSubEagerLoadObject',
                 ],
-                'expected' => 80
+                'expected' => 88
             ],
             [
                 'iden' => 'belongs-to-a',
                 'eagerLoad' => [
                     'BelongsToEagerLoadObject',
                 ],
-                'expected' => 82
+                'expected' => 90
             ],
             [
                 'iden' => 'belongs-to-b',
                 'eagerLoad' => [
                     'BelongsToEagerLoadObject.BelongsToSubEagerLoadObject',
                 ],
-                'expected' => 81
+                'expected' => 89
             ],
             [
                 'iden' => 'belongs-to-c',
                 'eagerLoad' => [
                     'BelongsToEagerLoadObject.BelongsToSubEagerLoadObject.BelongsToSubSubEagerLoadObject',
                 ],
-                'expected' => 80
+                'expected' => 88
             ],
             [
                 'iden' => 'has-many-a',
                 'eagerLoad' => [
                     'HasManyEagerLoadObjects',
                 ],
-                'expected' => 82
+                'expected' => 90
             ],
             [
                 'iden' => 'has-many-b',
                 'eagerLoad' => [
                     'HasManyEagerLoadObjects.HasManySubEagerLoadObjects',
                 ],
-                'expected' => 79
+                'expected' => 87
             ],
             [
                 'iden' => 'has-many-c',
                 'eagerLoad' => [
                     'HasManyEagerLoadObjects.HasManySubEagerLoadObjects.HasManySubSubEagerLoadObjects',
                 ],
-                'expected' => 72
+                'expected' => 80
             ],
             [
                 'iden' => 'many-many-a',
                 'eagerLoad' => [
                     'ManyManyEagerLoadObjects',
                 ],
-                'expected' => 83 // same number as lazy-load, though without an INNER JOIN
+                'expected' => 91 // same number as lazy-load, though without an INNER JOIN
             ],
             [
                 'iden' => 'many-many-b',
                 'eagerLoad' => [
                     'ManyManyEagerLoadObjects.ManyManySubEagerLoadObjects',
                 ],
-                'expected' => 81
+                'expected' => 89
             ],
             [
                 'iden' => 'many-many-c',
                 'eagerLoad' => [
                     'ManyManyEagerLoadObjects.ManyManySubEagerLoadObjects.ManyManySubSubEagerLoadObjects',
                 ],
-                'expected' => 75
+                'expected' => 83
             ],
             [
                 'iden' => 'many-many-through-a',
                 'eagerLoad' => [
                     'ManyManyThroughEagerLoadObjects',
                 ],
-                'expected' => 83
+                'expected' => 91
             ],
             [
                 'iden' => 'many-many-through-b',
                 'eagerLoad' => [
                     'ManyManyThroughEagerLoadObjects.ManyManyThroughSubEagerLoadObjects',
                 ],
-                'expected' => 81
+                'expected' => 89
             ],
             [
                 'iden' => 'many-many-through-c',
                 'eagerLoad' => [
                     'ManyManyThroughEagerLoadObjects.ManyManyThroughSubEagerLoadObjects.ManyManyThroughSubSubEagerLoadObjects',
                 ],
-                'expected' => 75
+                'expected' => 83
             ],
             [
                 'iden' => 'belongs-many-many-a',
                 'eagerLoad' => [
                     'BelongsManyManyEagerLoadObjects',
                 ],
-                'expected' => 83
+                'expected' => 91
             ],
             [
                 'iden' => 'belongs-many-many-b',
                 'eagerLoad' => [
                     'BelongsManyManyEagerLoadObjects.BelongsManyManySubEagerLoadObjects',
                 ],
-                'expected' => 81
+                'expected' => 89
             ],
             [
                 'iden' => 'belongs-many-many-c',
                 'eagerLoad' => [
                     'BelongsManyManyEagerLoadObjects.BelongsManyManySubEagerLoadObjects.BelongsManyManySubSubEagerLoadObjects',
                 ],
-                'expected' => 75
+                'expected' => 83
             ],
             [
                 'iden' => 'mixed-a',
                 'eagerLoad' => [
                     'MixedManyManyEagerLoadObjects',
                 ],
-                'expected' => 83
+                'expected' => 91
             ],
             [
                 'iden' => 'mixed-b',
                 'eagerLoad' => [
                     'MixedManyManyEagerLoadObjects.MixedHasManyEagerLoadObjects',
                 ],
-                'expected' => 80
+                'expected' => 88
             ],
             [
                 'iden' => 'mixed-c',
                 'eagerLoad' => [
                     'MixedManyManyEagerLoadObjects.MixedHasManyEagerLoadObjects.MixedHasOneEagerLoadObject',
                 ],
-                'expected' => 73
+                'expected' => 81
+            ],
+            [
+                'iden' => 'mixed-back-a',
+                'eagerLoad' => [
+                    'MixedBackwardsHasOneEagerLoadObject',
+                ],
+                'expected' => 90
+            ],
+            [
+                'iden' => 'mixed-back-b',
+                'eagerLoad' => [
+                    'MixedBackwardsHasOneEagerLoadObject.MixedBackwardsHasManyEagerLoadObjects',
+                ],
+                'expected' => 89
+            ],
+            [
+                'iden' => 'mixed-back-c',
+                'eagerLoad' => [
+                    'MixedBackwardsHasOneEagerLoadObject.MixedBackwardsHasManyEagerLoadObjects.MixedBackwardsManyManyEagerLoadObjects',
+                ],
+                'expected' => 87
             ],
             [
                 'iden' => 'duplicates',
@@ -346,7 +376,7 @@ class DataListEagerLoadingTest extends SapphireTest
                     'BelongsManyManyEagerLoadObjects.BelongsManyManySubEagerLoadObjects',
                     'MixedManyManyEagerLoadObjects.MixedHasManyEagerLoadObjects.MixedHasOneEagerLoadObject',
                 ],
-                'expected' => 73
+                'expected' => 81
             ],
             [
                 'iden' => 'all',
@@ -358,8 +388,9 @@ class DataListEagerLoadingTest extends SapphireTest
                     'ManyManyThroughEagerLoadObjects.ManyManyThroughSubEagerLoadObjects.ManyManyThroughSubSubEagerLoadObjects',
                     'BelongsManyManyEagerLoadObjects.BelongsManyManySubEagerLoadObjects.BelongsManyManySubSubEagerLoadObjects',
                     'MixedManyManyEagerLoadObjects.MixedHasManyEagerLoadObjects.MixedHasOneEagerLoadObject',
+                    'MixedBackwardsHasOneEagerLoadObject.MixedBackwardsHasManyEagerLoadObjects.MixedBackwardsManyManyEagerLoadObjects',
                 ],
-                'expected' => 32
+                'expected' => 36
             ],
         ];
     }
@@ -440,6 +471,13 @@ class DataListEagerLoadingTest extends SapphireTest
             'mixedHasOneObj 0 1 0 1',
             'mixedHasManyObj 0 1 1',
             'mixedHasOneObj 0 1 1 1',
+            'mixedBackwardsHasOneObj 0',
+            'mixedBackwardsHasManyObj 0 0',
+            'mixedBackwardsManyManyObj 0 0 0',
+            'mixedBackwardsManyManyObj 0 0 1',
+            'mixedBackwardsHasManyObj 0 1',
+            'mixedBackwardsManyManyObj 0 1 0',
+            'mixedBackwardsManyManyObj 0 1 1',
             'obj 1',
             'hasOneObj 1',
             'hasOneSubObj 1',
@@ -513,6 +551,13 @@ class DataListEagerLoadingTest extends SapphireTest
             'mixedHasOneObj 1 1 0 1',
             'mixedHasManyObj 1 1 1',
             'mixedHasOneObj 1 1 1 1',
+            'mixedBackwardsHasOneObj 1',
+            'mixedBackwardsHasManyObj 1 0',
+            'mixedBackwardsManyManyObj 1 0 0',
+            'mixedBackwardsManyManyObj 1 0 1',
+            'mixedBackwardsHasManyObj 1 1',
+            'mixedBackwardsManyManyObj 1 1 0',
+            'mixedBackwardsManyManyObj 1 1 1',
         ];
     }
 
@@ -667,6 +712,25 @@ class DataListEagerLoadingTest extends SapphireTest
                     }
                 }
             }
+            $mixedBackwardsHasOneObj = new MixedBackwardsHasOneEagerLoadObject();
+            $mixedBackwardsHasOneObj->Title = "mixedBackwardsHasOneObj $i";
+            $mixedBackwardsHasOneObjID = $mixedBackwardsHasOneObj->write();
+
+            $obj->MixedBackwardsHasOneEagerLoadObjectID = $mixedBackwardsHasOneObjID;
+            $obj->write();
+
+            for ($j = 0; $j < $numLevel2Records; $j++) {
+                $mixedBackwardsHasManyObj = new MixedBackwardsHasManyEagerLoadObject();
+                $mixedBackwardsHasManyObj->Title = "mixedBackwardsHasManyObj $i $j";
+                $mixedBackwardsHasManyObj->MixedBackwardsHasOneEagerLoadObjectID = $mixedBackwardsHasOneObjID;
+                $mixedBackwardsHasManyObjID = $mixedBackwardsHasManyObj->write();
+                $mixedBackwardsHasOneObj->MixedBackwardsHasManyEagerLoadObjects()->add($mixedBackwardsHasManyObj);
+                for ($k = 0; $k < $numLevel3Records; $k++) {
+                    $mixedBackwardsManyManyObj = new MixedBackwardsManyManyEagerLoadObject();
+                    $mixedBackwardsManyManyObj->Title = "mixedBackwardsManyManyObj $i $j $k";
+                    $mixedBackwardsHasManyObj->MixedBackwardsManyManyEagerLoadObjects()->add($mixedBackwardsManyManyObj);
+                }
+            }
         }
     }
 
@@ -745,12 +809,79 @@ class DataListEagerLoadingTest extends SapphireTest
                         $results[] = $mixedHasManyObj->MixedHasOneEagerLoadObject()->Title;
                     }
                 }
+                $mixedBackwardsHasOneObj = $obj->MixedBackwardsHasOneEagerLoadObject();
+                if ($mixedBackwardsHasOneObj) {
+                    $results[] = $mixedBackwardsHasOneObj->Title;
+                    foreach ($mixedBackwardsHasOneObj->MixedBackwardsHasManyEagerLoadObjects() as $mixedBackwardsHasManyObj) {
+                        $results[] = $mixedBackwardsHasManyObj->Title;
+                        foreach ($mixedBackwardsHasManyObj->MixedBackwardsManyManyEagerLoadObjects() as $mixedBackwardsManyManyObj) {
+                            $results[] = $mixedBackwardsManyManyObj->Title;
+                        }
+                    }
+                }
             }
             $selectCount = $this->stopCountingSelectQueries();
         } finally {
             $this->resetShowQueries();
         }
         return [$results, $selectCount];
+    }
+
+    /**
+     * @dataProvider provideEagerLoadRelationsEmpty
+     */
+    public function testEagerLoadRelationsEmpty(string $eagerLoadRelation, int $expectedNumQueries): void
+    {
+        EagerLoadObject::create(['Title' => 'test object'])->write();
+        $dataList = EagerLoadObject::get()->eagerLoad($eagerLoadRelation);
+        $this->startCountingSelectQueries();
+        foreach ($dataList as $record) {
+            $relation = $record->$eagerLoadRelation();
+            if ($relation instanceof SS_List) {
+                // The list should be an empty eagerloaded list
+                $this->assertInstanceOf(EagerLoadedList::class, $relation);
+                $this->assertCount(0, $relation);
+            } elseif ($relation !== null) {
+                // There should be no record here
+                $this->assertSame($relation->ID, 0);
+            }
+        }
+        $numQueries = $this->stopCountingSelectQueries();
+        $this->assertSame($expectedNumQueries, $numQueries);
+    }
+
+    public function provideEagerLoadRelationsEmpty(): array
+    {
+        return [
+            'has_one' => [
+                'eagerLoad' => 'HasOneEagerLoadObject',
+                'expectedNumQueries' => 1,
+            ],
+            'polymorph_has_one' => [
+                'eagerLoad' => 'HasOnePolymorphObject',
+                'expectedNumQueries' => 1,
+            ],
+            'belongs_to' => [
+                'eagerLoad' => 'BelongsToEagerLoadObject',
+                'expectedNumQueries' => 2,
+            ],
+            'has_many' => [
+                'eagerLoad' => 'HasManyEagerLoadObjects',
+                'expectedNumQueries' => 2,
+            ],
+            'many_many' => [
+                'eagerLoad' => 'ManyManyEagerLoadObjects',
+                'expectedNumQueries' => 2,
+            ],
+            'many_many through' => [
+                'eagerLoad' => 'ManyManyThroughEagerLoadObjects',
+                'expectedNumQueries' => 2,
+            ],
+            'belongs_many_many' => [
+                'eagerLoad' => 'BelongsManyManyEagerLoadObjects',
+                'expectedNumQueries' => 2,
+            ],
+        ];
     }
 
     public function testEagerLoadFourthLevelException(): void
@@ -897,7 +1028,7 @@ class DataListEagerLoadingTest extends SapphireTest
     {
         $this->createEagerLoadData(5);
         $filter = ['Title:GreaterThan' => 'obj 0'];
-        $dataList = EagerLoadObject::get()->filter($filter)->eagerLoad(...$eagerLoad);
+        $dataList = EagerLoadObject::get()->filter($filter)->eagerLoad($eagerLoad);
 
         // Validate that filtering results still actually works on the base list
         $this->assertListEquals([
@@ -1253,5 +1384,498 @@ class DataListEagerLoadingTest extends SapphireTest
         $record->HasManyEagerLoadObjects()->add(HasManyEagerLoadObject::create(['Title' => 'My related obj']));
         $obj = EagerLoadObject::get()->eagerLoad('HasManyEagerLoadObjects')->last();
         $this->assertInstanceOf(EagerLoadedList::class, $obj->HasManyEagerLoadObjects());
+    }
+
+    /**
+     * Tests that if the same record exists in multiple relations, its data is
+     * eagerloaded without extra unnecessary queries.
+     */
+    public function testEagerLoadingSharedRelations()
+    {
+        $record1 = EagerLoadObject::create(['Title' => 'My obj1']);
+        $record1->write();
+        $record2 = EagerLoadObject::create(['Title' => 'My obj2']);
+        $record2->write();
+        $manyMany = ManyManyEagerLoadObject::create(['Title' => 'My manymany']);
+        $manyMany->write();
+        $record1->ManyManyEagerLoadObjects()->add($manyMany);
+        $record2->ManyManyEagerLoadObjects()->add($manyMany);
+        $subManyMany = ManyManySubEagerLoadObject::create(['Title' => 'My submanymany']);
+        $subManyMany->write();
+        $manyMany->ManyManySubEagerLoadObjects()->add($subManyMany);
+
+        $eagerLoadQuery = EagerLoadObject::get()
+            ->filter(['ID' => [$record1->ID, $record2->ID]])
+            ->eagerLoad('ManyManyEagerLoadObjects.ManyManySubEagerLoadObjects');
+        $loop1Count = 0;
+        $loop2Count = 0;
+        foreach ($eagerLoadQuery as $record) {
+            $loop1Count++;
+            $eagerLoaded1 = $record->ManyManyEagerLoadObjects();
+            $this->assertInstanceOf(EagerLoadedList::class, $eagerLoaded1);
+            foreach ($eagerLoaded1 as $manyManyRecord) {
+                $loop2Count++;
+                $eagerLoaded2 = $manyManyRecord->ManyManySubEagerLoadObjects();
+                $this->assertInstanceOf(EagerLoadedList::class, $eagerLoaded2);
+            }
+        }
+        $this->assertGreaterThan(1, $loop1Count);
+        $this->assertGreaterThan(1, $loop2Count);
+    }
+
+    public function testInvalidAssociativeArray(): void
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage(
+            'Value of associative array must be a callable.'
+            . 'If you don\'t want to pre-filter the list, use an indexed array.'
+        );
+        EagerLoadObject::get()->eagerLoad(['HasManyEagerLoadObjects' => 'HasManyEagerLoadObjects']);
+    }
+
+    public function provideNoLimitEagerLoadingQuery(): array
+    {
+        // Note we don't test has_one or belongs_to because those don't accept a callback at all.
+        return [
+            'limit list directly - has_many' => [
+                'relation' => 'HasManyEagerLoadObjects',
+                'relationType' => 'has_many',
+                'callback' => fn (DataList $list) => $list->limit(1),
+            ],
+            'limit list directly - many_many' => [
+                'relation' => 'ManyManyEagerLoadObjects',
+                'relationType' => 'many_many',
+                'callback' => fn (DataList $list) => $list->limit(1),
+            ],
+            'limit underlying dataquery - has_many' => [
+                'relation' => 'HasManyEagerLoadObjects',
+                'relationType' => 'has_many',
+                'callback' => fn (DataList $list) => $list->alterDataQuery(fn (DataQuery $query) => $query->limit(1)),
+            ],
+            'limit underlying dataquery - many_many' => [
+                'relation' => 'ManyManyEagerLoadObjects',
+                'relationType' => 'many_many',
+                'callback' => fn (DataList $list) => $list->alterDataQuery(fn (DataQuery $query) => $query->limit(1)),
+            ],
+        ];
+    }
+
+    /**
+     * Tests that attempting to limit an eagerloading query will throw an exception.
+     *
+     * @dataProvider provideNoLimitEagerLoadingQuery
+     */
+    public function testNoLimitEagerLoadingQuery(string $relation, string $relationType, callable $callback): void
+    {
+        // Need to have at least one record in the main list for eagerloading to even be triggered.
+        $record = new EagerLoadObject();
+        $record->write();
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage(
+            "Cannot apply limit to eagerloaded data for $relationType relation $relation."
+        );
+        EagerLoadObject::get()->eagerLoad([$relation => $callback])->toArray();
+    }
+
+    public function provideCannotManipulateUnaryRelationQuery(): array
+    {
+        return [
+            'has_one' => [
+                'relation' => 'HasOneEagerLoadObject',
+                'relationType' => 'has_one',
+            ],
+            'belongs_to' => [
+                'relation' => 'BelongsToEagerLoadObject',
+                'relationType' => 'belongs_to',
+            ],
+        ];
+    }
+
+    /**
+     * Tests that attempting to manipulate a has_one or belongs_to eagerloading query will throw an exception.
+     *
+     * @dataProvider provideCannotManipulateUnaryRelationQuery
+     */
+    public function testCannotManipulateUnaryRelationQuery(string $relation, string $relationType): void
+    {
+        // Need to have at least one record in the main list for eagerloading to even be triggered.
+        $record = new EagerLoadObject();
+        $record->write();
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage(
+            "Cannot manipulate eagerloading query for $relationType relation $relation"
+        );
+        EagerLoadObject::get()->eagerLoad([$relation => fn (DataList $list) => $list])->toArray();
+    }
+
+    /**
+     * Tests that attempting to manipulate an eagerloading query without returning the list will throw an exception.
+     */
+    public function testManipulatingEagerloadingQueryNoReturn(): void
+    {
+        // Need to have at least one record in the main list for eagerloading to even be triggered.
+        $record = new EagerLoadObject();
+        $record->write();
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage(
+            'Eagerloading callback for has_many relation HasManyEagerLoadObjects must return a DataList.'
+        );
+        EagerLoadObject::get()->eagerLoad([
+            'HasManyEagerLoadObjects' => function (DataList $list) {
+                $list->filter('ID', 1);
+            }
+        ])->toArray();
+    }
+
+    public function provideManipulatingEagerloadingQuery(): array
+    {
+        return [
+            'nested has_many' => [
+                'relationType' => 'has_many',
+                'relations' => [
+                    'HasManyEagerLoadObjects' => HasManyEagerLoadObject::class,
+                    'HasManySubEagerLoadObjects' => HasManySubEagerLoadObject::class,
+                ],
+                'eagerLoad' => [
+                    'HasManyEagerLoadObjects' => fn (DataList $list) => $list->filter(['Title:StartsWith' => 'HasMany T'])->Sort('Title', 'ASC'),
+                    'HasManyEagerLoadObjects.HasManySubEagerLoadObjects' => fn (DataList $list) => $list->Sort(['Title' => 'DESC']),
+                ],
+                'expected' => [
+                    'first loop' => ['HasMany Three', 'HasMany Two'],
+                    'second loop' => ['Sub B', 'Sub A'],
+                ],
+            ],
+            'nested has_many (reverse sort)' => [
+                'relationType' => 'has_many',
+                'relations' => [
+                    'HasManyEagerLoadObjects' => HasManyEagerLoadObject::class,
+                    'HasManySubEagerLoadObjects' => HasManySubEagerLoadObject::class,
+                ],
+                'eagerLoad' => [
+                    'HasManyEagerLoadObjects' => fn (DataList $list) => $list->filter(['Title:StartsWith' => 'HasMany T'])->Sort('Title', 'DESC'),
+                    'HasManyEagerLoadObjects.HasManySubEagerLoadObjects' => fn (DataList $list) => $list->Sort(['Title' => 'ASC']),
+                ],
+                'expected' => [
+                    'first loop' => ['HasMany Two', 'HasMany Three'],
+                    'second loop' => ['Sub A', 'Sub B'],
+                ],
+            ],
+            'nested many_many' => [
+                'relationType' => 'many_many',
+                'relations' => [
+                    'ManyManyEagerLoadObjects' => ManyManyEagerLoadObject::class,
+                    'ManyManySubEagerLoadObjects' => ManyManySubEagerLoadObject::class,
+                ],
+                'eagerLoad' => [
+                    'ManyManyEagerLoadObjects' => fn (DataList $list) => $list->filter(['Title:StartsWith' => 'ManyMany T'])->Sort('Title', 'ASC'),
+                    'ManyManyEagerLoadObjects.ManyManySubEagerLoadObjects' => fn (DataList $list) => $list->Sort(['Title' => 'DESC']),
+                ],
+                'expected' => [
+                    'first loop' => ['ManyMany Three', 'ManyMany Two'],
+                    'second loop' => ['Sub B', 'Sub A'],
+                ],
+            ],
+            'nested many_many (reverse sort)' => [
+                'relationType' => 'many_many',
+                'relations' => [
+                    'ManyManyEagerLoadObjects' => ManyManyEagerLoadObject::class,
+                    'ManyManySubEagerLoadObjects' => ManyManySubEagerLoadObject::class,
+                ],
+                'eagerLoad' => [
+                    'ManyManyEagerLoadObjects' => fn (DataList $list) => $list->filter(['Title:StartsWith' => 'ManyMany T'])->Sort('Title', 'DESC'),
+                    'ManyManyEagerLoadObjects.ManyManySubEagerLoadObjects' => fn (DataList $list) => $list->Sort(['Title' => 'ASC']),
+                ],
+                'expected' => [
+                    'first loop' => ['ManyMany Two', 'ManyMany Three'],
+                    'second loop' => ['Sub A', 'Sub B'],
+                ],
+            ],
+            'nested belongs_many_many' => [
+                'relationType' => 'belongs_many_many',
+                'relations' => [
+                    'BelongsManyManyEagerLoadObjects' => BelongsManyManyEagerLoadObject::class,
+                    'BelongsManyManySubEagerLoadObjects' => BelongsManyManySubEagerLoadObject::class,
+                ],
+                'eagerLoad' => [
+                    'BelongsManyManyEagerLoadObjects' => fn (DataList $list) => $list->filter(['Title:StartsWith' => 'ManyMany T'])->Sort('Title', 'ASC'),
+                    'BelongsManyManyEagerLoadObjects.BelongsManyManySubEagerLoadObjects' => fn (DataList $list) => $list->Sort(['Title' => 'DESC']),
+                ],
+                'expected' => [
+                    'first loop' => ['ManyMany Three', 'ManyMany Two'],
+                    'second loop' => ['Sub B', 'Sub A'],
+                ],
+            ],
+            'nested belongs_many_many (reverse sort)' => [
+                'relationType' => 'belongs_many_many',
+                'relations' => [
+                    'BelongsManyManyEagerLoadObjects' => BelongsManyManyEagerLoadObject::class,
+                    'BelongsManyManySubEagerLoadObjects' => BelongsManyManySubEagerLoadObject::class,
+                ],
+                'eagerLoad' => [
+                    'BelongsManyManyEagerLoadObjects' => fn (DataList $list) => $list->filter(['Title:StartsWith' => 'ManyMany T'])->Sort('Title', 'DESC'),
+                    'BelongsManyManyEagerLoadObjects.BelongsManyManySubEagerLoadObjects' => fn (DataList $list) => $list->Sort(['Title' => 'ASC']),
+                ],
+                'expected' => [
+                    'first loop' => ['ManyMany Two', 'ManyMany Three'],
+                    'second loop' => ['Sub A', 'Sub B'],
+                ],
+            ],
+            'nested many_many_through' => [
+                'relationType' => 'many_many_through',
+                'relations' => [
+                    'ManyManyThroughEagerLoadObjects' => ManyManyThroughEagerLoadObject::class,
+                    'ManyManyThroughSubEagerLoadObjects' => ManyManyThroughSubEagerLoadObject::class,
+                ],
+                'eagerLoad' => [
+                    'ManyManyThroughEagerLoadObjects' => fn (DataList $list) => $list->filter(['Title:StartsWith' => 'ManyMany T'])->Sort('Title', 'ASC'),
+                    'ManyManyThroughEagerLoadObjects.ManyManyThroughSubEagerLoadObjects' => fn (DataList $list) => $list->Sort(['Title' => 'DESC']),
+                ],
+                'expected' => [
+                    'first loop' => ['ManyMany Three', 'ManyMany Two'],
+                    'second loop' => ['Sub B', 'Sub A'],
+                ],
+            ],
+            'nested many_many_through (reverse sort)' => [
+                'relationType' => 'many_many_through',
+                'relations' => [
+                    'ManyManyThroughEagerLoadObjects' => ManyManyThroughEagerLoadObject::class,
+                    'ManyManyThroughSubEagerLoadObjects' => ManyManyThroughSubEagerLoadObject::class,
+                ],
+                'eagerLoad' => [
+                    'ManyManyThroughEagerLoadObjects' => fn (DataList $list) => $list->filter(['Title:StartsWith' => 'ManyMany T'])->Sort('Title', 'DESC'),
+                    'ManyManyThroughEagerLoadObjects.ManyManyThroughSubEagerLoadObjects' => fn (DataList $list) => $list->Sort(['Title' => 'ASC']),
+                ],
+                'expected' => [
+                    'first loop' => ['ManyMany Two', 'ManyMany Three'],
+                    'second loop' => ['Sub A', 'Sub B'],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Tests that callbacks can be used to manipulate eagerloading queries
+     *
+     * @dataProvider provideManipulatingEagerloadingQuery
+     */
+    public function testManipulatingEagerloadingQuery(string $relationType, array $relations, array $eagerLoad, array $expected): void
+    {
+        $relationNames = array_keys($relations);
+        $relationOne = $relationNames[0];
+        $relationTwo = $relationNames[1];
+        $classOne = $relations[$relationOne];
+        $classTwo = $relations[$relationTwo];
+        // Prepare fixtures.
+        // Eager loading is different to most tests - we build fixtures at run time per test
+        // to avoid wasting a bunch of CI time building test-specific YAML fixtures.
+        $record = new EagerLoadObject();
+        $record->write();
+        if ($relationType === 'has_many') {
+            $hasMany1 = new $classOne(['Title' => 'HasMany One']);
+            $hasMany2 = new $classOne(['Title' => 'HasMany Two']);
+            $hasMany3 = new $classOne(['Title' => 'HasMany Three']);
+            $hasMany = [$hasMany1, $hasMany2, $hasMany3];
+            foreach ($hasMany as $hasManyRecord) {
+                $hasManyRecord->write();
+                // Since these are has_many they can't share the same records, so build
+                // separate records for each list.
+                $hasManySub1 = new $classTwo(['Title' => 'Sub A']);
+                $hasManySub2 = new $classTwo(['Title' => 'Sub B']);
+                $hasManySub1->write();
+                $hasManySub2->write();
+                $hasManyRecord->$relationTwo()->addMany([$hasManySub1, $hasManySub2]);
+            }
+            $record->$relationOne()->addMany($hasMany);
+        } elseif (str_contains($relationType, 'many_many')) {
+            $manyMany1 = new $classOne(['Title' => 'ManyMany One']);
+            $manyMany2 = new $classOne(['Title' => 'ManyMany Two']);
+            $manyMany3 = new $classOne(['Title' => 'ManyMany Three']);
+            $manyManySub1 = new $classTwo(['Title' => 'Sub A']);
+            $manyManySub2 = new $classTwo(['Title' => 'Sub B']);
+            $manyManySub1->write();
+            $manyManySub2->write();
+            $manyMany = [$manyMany1, $manyMany2, $manyMany3];
+            foreach ($manyMany as $manyManyRecord) {
+                $manyManyRecord->write();
+                $manyManyRecord->$relationTwo()->addMany([$manyManySub1, $manyManySub2]);
+            }
+            $record->$relationOne()->addMany($manyMany);
+        } else {
+            throw new LogicException("Unexpected relation type: $relationType");
+        }
+
+        // Loop through the relations and make assertions
+        foreach (EagerLoadObject::get()->filter(['ID' => $record->ID])->eagerLoad($eagerLoad) as $eagerLoadObject) {
+            $list = $eagerLoadObject->$relationOne();
+            $this->assertInstanceOf(EagerLoadedList::class, $list);
+            $this->assertSame($expected['first loop'], $list->column('Title'));
+            foreach ($list as $relatedObject) {
+                $list = $relatedObject->$relationTwo();
+                $this->assertInstanceOf(EagerLoadedList::class, $list);
+                $this->assertSame($expected['second loop'], $list->column('Title'));
+            }
+        }
+    }
+
+    public function testHasOneMultipleAppearance(): void
+    {
+        $items = $this->provideHasOneObjects();
+        $this->validateMultipleAppearance($items, 6, EagerLoadObject::get());
+        $this->validateMultipleAppearance($items, 2, EagerLoadObject::get()->eagerLoad('HasOneEagerLoadObject'));
+    }
+
+    protected function provideHasOneObjects(): array
+    {
+        $subA = new HasOneEagerLoadObject();
+        $subA->Title = 'A';
+        $subA->write();
+
+        $subB = new HasOneEagerLoadObject();
+        $subB->Title = 'B';
+        $subB->write();
+
+        $subC = new HasOneEagerLoadObject();
+        $subC->Title = 'C';
+        $subC->write();
+
+        $baseA = new EagerLoadObject();
+        $baseA->Title = 'A';
+        $baseA->HasOneEagerLoadObjectID = $subA->ID;
+        $baseA->write();
+
+        $baseB = new EagerLoadObject();
+        $baseB->Title = 'B';
+        $baseB->HasOneEagerLoadObjectID = $subA->ID;
+        $baseB->write();
+
+        $baseC = new EagerLoadObject();
+        $baseC->Title = 'C';
+        $baseC->HasOneEagerLoadObjectID = $subB->ID;
+        $baseC->write();
+
+        $baseD = new EagerLoadObject();
+        $baseD->Title = 'D';
+        $baseD->HasOneEagerLoadObjectID = $subC->ID;
+        $baseD->write();
+
+        $baseE = new EagerLoadObject();
+        $baseE->Title = 'E';
+        $baseE->HasOneEagerLoadObjectID = $subB->ID;
+        $baseE->write();
+
+        $baseF = new EagerLoadObject();
+        $baseF->Title = 'F';
+        $baseF->HasOneEagerLoadObjectID = 0;
+        $baseF->write();
+
+        return [
+            $baseA->ID => [$subA->ClassName, $subA->ID],
+            $baseB->ID => [$subA->ClassName, $subA->ID],
+            $baseC->ID => [$subB->ClassName, $subB->ID],
+            $baseD->ID => [$subC->ClassName, $subC->ID],
+            $baseE->ID => [$subB->ClassName, $subB->ID],
+            $baseF->ID => [null, 0],
+        ];
+    }
+
+    public function testPolymorphEagerLoading(): void
+    {
+        $items = $this->providePolymorphHasOne();
+        $this->validateMultipleAppearance($items, 5, EagerLoadObject::get(), 'HasOnePolymorphObject');
+        $this->validateMultipleAppearance($items, 4, EagerLoadObject::get()->eagerLoad('HasOnePolymorphObject'), 'HasOnePolymorphObject');
+    }
+
+    /**
+     * Tests that attempting to eager load a sub relation to a polymorphic relation will throw an exception.
+     */
+    public function testEagerLoadingSubRelationToPolymorphicException(): void
+    {
+        $items = $this->providePolymorphHasOne();
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid relation passed to eagerLoad() - HasOnePolymorphObject.ManyManySubEagerLoadObjects. Further nested relations are not supported after polymorphic has_one relation HasOnePolymorphObject.");
+        EagerLoadObject::get()->eagerLoad("HasOnePolymorphObject.ManyManySubEagerLoadObjects")->toArray();
+    }
+
+    protected function providePolymorphHasOne(): array
+    {
+        $subA = new HasOneEagerLoadObject();
+        $subA->Title = 'A';
+        $subA->write();
+
+        $subB = new HasOneEagerLoadObject();
+        $subB->Title = 'B';
+        $subB->write();
+
+        $subC = new HasOneSubSubEagerLoadObject();
+        $subC->Title = 'C';
+        $subC->write();
+
+        $subD = new EagerLoadSubClassObject();
+        $subD->Title = 'D';
+        $subD->write();
+
+        $baseA = new EagerLoadObject();
+        $baseA->Title = 'A';
+        $baseA->HasOnePolymorphObjectClass = $subA->ClassName;
+        $baseA->HasOnePolymorphObjectID = $subA->ID;
+        $baseA->write();
+
+        $baseB = new EagerLoadObject();
+        $baseB->Title = 'B';
+        $baseB->HasOnePolymorphObjectClass = $subB->ClassName;
+        $baseB->HasOnePolymorphObjectID = $subB->ID;
+        $baseB->write();
+
+        $baseC = new EagerLoadObject();
+        $baseC->Title = 'C';
+        $baseC->HasOnePolymorphObjectClass = $subC->ClassName;
+        $baseC->HasOnePolymorphObjectID = $subC->ID;
+        $baseC->write();
+
+        $baseD = new EagerLoadObject();
+        $baseD->Title = 'D';
+        $baseD->HasOnePolymorphObjectClass = $subD->ClassName;
+        $baseD->HasOnePolymorphObjectID = $subD->ID;
+        $baseD->write();
+
+        $baseE = new EagerLoadObject();
+        $baseE->Title = 'E';
+        $baseE->HasOnePolymorphObjectClass = null;
+        $baseE->HasOnePolymorphObjectID = 0;
+        $baseE->write();
+
+        return [
+            $baseA->ID => [$subA->ClassName, $subA->ID],
+            $baseB->ID => [$subB->ClassName, $subB->ID],
+            $baseC->ID => [$subC->ClassName, $subC->ID],
+            $baseD->ID => [$subD->ClassName, $subD->ID],
+            $baseE->ID => [null, 0],
+        ];
+    }
+
+    protected function validateMultipleAppearance(
+        array $expectedRelations,
+        int $expected,
+        DataList $list,
+        string $relation = 'HasOneEagerLoadObject',
+    ): void {
+        try {
+            $this->startCountingSelectQueries();
+
+            /** @var EagerLoadObject $item */
+            foreach ($list as $item) {
+                $rel = $item->{$relation}();
+
+                $this->assertArrayHasKey($item->ID, $expectedRelations, $relation . ' should be loaded');
+                $this->assertEquals($expectedRelations[$item->ID][0], $rel?->ID ? $rel?->ClassName : null);
+                $this->assertEquals($expectedRelations[$item->ID][1], $rel?->ID ?? 0);
+            }
+
+            $this->assertSame($expected, $this->stopCountingSelectQueries());
+        } finally {
+            $this->resetShowQueries();
+        }
     }
 }

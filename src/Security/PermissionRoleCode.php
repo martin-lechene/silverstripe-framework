@@ -23,6 +23,8 @@ class PermissionRoleCode extends DataObject
     ];
 
     private static $table_name = "PermissionRoleCode";
+
+    private static bool $require_sudo_mode = true;
     
     private static $indexes = [
         "Code" => true,

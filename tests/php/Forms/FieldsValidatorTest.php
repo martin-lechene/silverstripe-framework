@@ -67,7 +67,7 @@ class FieldsValidatorTest extends SapphireTest
         }
         $form = new Form(null, 'testForm', $fieldList, new FieldList([/* no actions */]), new FieldsValidator());
 
-        $result = $form->validationResult();
+        $result = $form->validate();
         $this->assertSame($isValid, $result->isValid());
         $messages = $result->getMessages();
         if ($isValid) {

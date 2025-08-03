@@ -2,16 +2,17 @@
 
 namespace SilverStripe\Forms\GridField;
 
+use LogicException;
 use SilverStripe\Control\HTTPRequest;
-use SilverStripe\Core\Convert;
 use SilverStripe\Core\Extensible;
 use SilverStripe\ORM\ArrayList;
-use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\ORM\FieldType\DBHTMLText;
+use SilverStripe\ORM\FieldType\DBHTMLVarchar;
 use SilverStripe\Security\Security;
 use SilverStripe\View\ArrayData;
 use SilverStripe\View\Requirements;
+use SilverStripe\View\ViewableData;
 
 /**
  * Adds an "Print" button to the bottom or top of a GridField.
@@ -155,13 +156,20 @@ class GridFieldPrintButton extends AbstractGridFieldComponent implements GridFie
             return $this->printColumns;
         }
 
-        /** @var GridFieldDataColumns $dataCols */
         $dataCols = $gridField->getConfig()->getComponentByType(GridFieldDataColumns::class);
         if ($dataCols) {
             return $dataCols->getDisplayFields($gridField);
         }
 
-        return DataObject::singleton($gridField->getModelClass())->summaryFields();
+        $modelClass = $gridField->getModelClass();
+        $singleton = singleton($modelClass);
+        if (!$singleton->hasMethod('summaryFields')) {
+            throw new LogicException(
+                'Cannot dynamically determine columns. Add a GridFieldDataColumns component to your GridField'
+                . " or implement a summaryFields() method on $modelClass"
+            );
+        }
+        return $singleton->summaryFields();
     }
 
     /**
@@ -223,21 +231,30 @@ class GridFieldPrintButton extends AbstractGridFieldComponent implements GridFie
         $items = $gridField->getManipulatedList();
         $itemRows = new ArrayList();
 
-        /** @var GridFieldDataColumns $gridFieldColumnsComponent */
+        // If there's a GridFieldDataColumns component, ensure it doesn't escape raw strings
+        // as that would result in double escaping when we render out the print template.
         $gridFieldColumnsComponent = $gridField->getConfig()->getComponentByType(GridFieldDataColumns::class);
+        $origDoEscapeFields = $gridFieldColumnsComponent?->getDoEscapeFields();
+        $gridFieldColumnsComponent?->setDoEscapeFields(false);
 
-        /** @var DataObject $item */
+        /** @var ViewableData $item */
         foreach ($items->limit(null) as $item) {
+            // Assume item can be viewed if canView() isn't implemented
             if (!$item->hasMethod('canView') || $item->canView()) {
                 $itemRow = new ArrayList();
 
                 foreach ($printColumns as $field => $label) {
                     $value = $gridFieldColumnsComponent
-                        ? strip_tags($gridFieldColumnsComponent->getColumnContent($gridField, $item, $field))
+                        ? strip_tags($gridFieldColumnsComponent->getColumnContent($gridField, $item, $field) ?? '')
                         : $gridField->getDataFieldValue($item, $field);
 
+                    // The value is used in a template, so to prevent XSS attacks we can't allow an HTML field here.
+                    // Getting the raw string here means it will end up being default-casted to DBText which is safe.
+                    if (is_a($value, DBHTMLText::class, false) || is_a($value, DBHTMLVarchar::class, false)) {
+                        $value = $value->__toString();
+                    }
                     $itemRow->push(new ArrayData([
-                        "CellString" => $value,
+                        'CellString' => $value,
                     ]));
                 }
 
@@ -249,6 +266,8 @@ class GridFieldPrintButton extends AbstractGridFieldComponent implements GridFie
                 $item->destroy();
             }
         }
+
+        $gridFieldColumnsComponent?->setDoEscapeFields($origDoEscapeFields);
 
         $ret = new ArrayData([
             "Title" => $this->getTitle($gridField),

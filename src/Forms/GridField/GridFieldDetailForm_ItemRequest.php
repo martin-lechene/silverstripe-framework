@@ -7,8 +7,10 @@ use SilverStripe\Admin\LeftAndMain;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
+use SilverStripe\Control\PjaxResponseNegotiator;
 use SilverStripe\Control\RequestHandler;
 use SilverStripe\Core\Convert;
+use SilverStripe\Core\ClassInfo;
 use SilverStripe\Forms\CompositeField;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\Form;
@@ -17,6 +19,7 @@ use SilverStripe\Forms\HiddenField;
 use SilverStripe\Forms\LiteralField;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\DataObjectInterface;
 use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\ORM\HasManyList;
 use SilverStripe\ORM\ManyManyList;
@@ -28,6 +31,7 @@ use SilverStripe\ORM\ValidationResult;
 use SilverStripe\View\ArrayData;
 use SilverStripe\View\HTML;
 use SilverStripe\View\SSViewer;
+use SilverStripe\View\ViewableData;
 
 class GridFieldDetailForm_ItemRequest extends RequestHandler
 {
@@ -64,7 +68,7 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
     protected $component;
 
     /**
-     * @var DataObject
+     * @var ViewableData
      */
     protected $record;
 
@@ -93,10 +97,15 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
     ];
 
     /**
+     * Used to cache the results of getGridFieldItemAdjacencies();
+     */
+    private array $cachedGridFieldItemAdjacencies = [];
+
+    /**
      *
      * @param GridField $gridField
      * @param GridFieldDetailForm $component
-     * @param DataObject $record
+     * @param ViewableData&DataObjectInterface $record
      * @param RequestHandler $requestHandler
      * @param string $popupFormName
      */
@@ -125,11 +134,12 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
      */
     public function view($request)
     {
-        if (!$this->record->canView()) {
+        // Assume item can be viewed if canView() isn't implemented
+        if ($this->record->hasMethod('canView') && !$this->record->canView()) {
             $this->httpError(403, _t(
                 __CLASS__ . '.ViewPermissionsFailure',
                 'It seems you don\'t have the necessary permissions to view "{ObjectTitle}"',
-                ['ObjectTitle' => $this->record->singular_name()]
+                ['ObjectTitle' => $this->getModelName()]
             ));
         }
 
@@ -166,7 +176,7 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
         ])->renderWith($this->getTemplates());
 
         if ($request->isAjax()) {
-            return $return;
+            return $this->getResponseNegotiator($return)->respond($request);
         } else {
             // If not requested by ajax, we need to render it within the controller context+template
             return $controller->customise([
@@ -183,6 +193,7 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
      */
     public function ItemEditForm()
     {
+        $this->resetAdjacenciesCache();
         $list = $this->gridField->getList();
 
         if (empty($this->record)) {
@@ -215,17 +226,25 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
             }
         }
 
-        if (!$this->record->canView()) {
+        // Assume item can be viewed if canView() isn't implemented
+        if ($this->record->hasMethod('canView') && !$this->record->canView()) {
             $controller = $this->getToplevelController();
             return $controller->httpError(403, _t(
                 __CLASS__ . '.ViewPermissionsFailure',
                 'It seems you don\'t have the necessary permissions to view "{ObjectTitle}"',
-                ['ObjectTitle' => $this->record->singular_name()]
+                ['ObjectTitle' => $this->getModelName()]
             ));
         }
 
         $fields = $this->component->getFields();
         if (!$fields) {
+            if (!$this->record->hasMethod('getCMSFields')) {
+                $modelClass = get_class($this->record);
+                throw new LogicException(
+                    'Cannot dynamically determine form fields. Pass the fields to GridFieldDetailForm::setFields()'
+                    . " or implement a getCMSFields() method on {$modelClass}"
+                );
+            }
             $fields = $this->record->getCMSFields();
         }
 
@@ -249,15 +268,15 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
 
         $form->loadDataFrom($this->record, $this->record->ID == 0 ? Form::MERGE_IGNORE_FALSEISH : Form::MERGE_DEFAULT);
 
-        if ($this->record->ID && !$this->record->canEdit()) {
+        if ($this->record->ID && (!$this->record->hasMethod('canEdit') || !$this->record->canEdit())) {
             // Restrict editing of existing records
             $form->makeReadonly();
             // Hack to re-enable delete button if user can delete
-            if ($this->record->canDelete()) {
-                $form->Actions()->fieldByName('action_doDelete')->setReadonly(false);
+            if ($this->record->hasMethod('canDelete') && $this->record->canDelete()) {
+                $form->Actions()->fieldByName('action_doDelete')?->setReadonly(false);
             }
         } elseif (!$this->record->ID
-            && !$this->record->canCreate(null, $this->getCreateContext())
+            && (!$this->record->hasMethod('canCreate') || !$this->record->canCreate(null, $this->getCreateContext()))
         ) {
             // Restrict creation of new records
             $form->makeReadonly();
@@ -286,13 +305,38 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
             }
 
             $form->Backlink = $this->getBackLink();
+
+            // Ensure the correct validation response is returned for AJAX requests
+            $form->setValidationResponseCallback(function (ValidationResult $errors) use ($form) {
+                $request = $this->getRequest();
+                if (!$request->isAjax()) {
+                    return null;
+                }
+                $negotiator = $this->getResponseNegotiator($form->forTemplate());
+                return $negotiator->respond($request, [
+                    'ValidationResult' => function () use ($errors) {
+                        return $this->prepareDataForPjax([
+                            'isValid' => $errors->isValid(),
+                            'messages' => $errors->getMessages()
+                        ]);
+                    }
+                ]);
+            });
         }
 
         $cb = $this->component->getItemEditFormCallback();
         if ($cb) {
             $cb($form, $this);
         }
+
         $this->extend("updateItemEditForm", $form);
+
+        // Check if the the record is a DataObject and if that DataObject requires sudo mode
+        // If so then require sudo mode for the item edit form
+        if (is_a($this->record, DataObject::class) && $this->record->getRequireSudoMode()) {
+            $form->requireSudoMode();
+        }
+
         return $form;
     }
 
@@ -328,7 +372,6 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
         $previousAndNextGroup->addExtraClass('btn-group--circular mr-2');
         $previousAndNextGroup->setFieldHolderTemplate(CompositeField::class . '_holder_buttongroup');
 
-        /** @var GridFieldDetailForm $component */
         $component = $this->gridField->getConfig()->getComponentByType(GridFieldDetailForm::class);
         $paginator = $this->getGridField()->getConfig()->getComponentByType(GridFieldPaginator::class);
         $gridState = $this->getGridField()->getState();
@@ -367,7 +410,7 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
 
         $rightGroup->push($previousAndNextGroup);
 
-        if ($component && $component->getShowAdd() && $this->record->canCreate()) {
+        if ($component && $component->getShowAdd() && $this->record->hasMethod('canCreate') && $this->record->canCreate()) {
             $rightGroup->push(
                 LiteralField::create(
                     'new-record',
@@ -386,7 +429,7 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
     }
 
     /**
-     * Build the set of form field actions for this DataObject
+     * Build the set of form field actions for the record being handled
      *
      * @return FieldList
      */
@@ -399,8 +442,12 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
         $majorActions->setFieldHolderTemplate(get_class($majorActions) . '_holder_buttongroup');
         $actions->push($majorActions);
 
-        if ($this->record->ID !== 0) { // existing record
-            if ($this->record->canEdit()) {
+        if ($this->record->ID !== null && $this->record->ID !== 0) { // existing record
+            if ($this->record->hasMethod('canEdit') && $this->record->canEdit()) {
+                if (!($this->record instanceof DataObjectInterface)) {
+                    throw new LogicException(get_class($this->record) . ' must implement ' . DataObjectInterface::class);
+                }
+
                 $noChangesClasses = 'btn-outline-primary font-icon-tick';
                 $majorActions->push(FormAction::create('doSave', _t('SilverStripe\\Forms\\GridField\\GridFieldDetailForm.Save', 'Save'))
                     ->addExtraClass($noChangesClasses)
@@ -410,7 +457,10 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
                     ->setAttribute('data-text-alternate', _t('SilverStripe\\CMS\\Controllers\\CMSMain.SAVEDRAFT', 'Save')));
             }
 
-            if ($this->record->canDelete()) {
+            if ($this->record->hasMethod('canDelete') && $this->record->canDelete()) {
+                if (!($this->record instanceof DataObjectInterface)) {
+                    throw new LogicException(get_class($this->record) . ' must implement ' . DataObjectInterface::class);
+                }
                 $actions->insertAfter('MajorActions', FormAction::create('doDelete', _t('SilverStripe\\Forms\\GridField\\GridFieldDetailForm.Delete', 'Delete'))
                     ->setUseButtonTag(true)
                     ->addExtraClass('btn-outline-danger btn-hide-outline font-icon-trash-bin action--delete'));
@@ -490,9 +540,9 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
      * {@see Form::saveInto()}
      *
      * Handles detection of falsey values explicitly saved into the
-     * DataObject by formfields
+     * record by formfields
      *
-     * @param DataObject $record
+     * @param ViewableData $record
      * @param SS_List $list
      * @return array List of data to write to the relation
      */
@@ -518,11 +568,11 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
         $isNewRecord = $this->record->ID == 0;
 
         // Check permission
-        if (!$this->record->canEdit()) {
+        if (!$this->record->hasMethod('canEdit') || !$this->record->canEdit()) {
             $this->httpError(403, _t(
                 __CLASS__ . '.EditPermissionsFailure',
                 'It seems you don\'t have the necessary permissions to edit "{ObjectTitle}"',
-                ['ObjectTitle' => $this->record->singular_name()]
+                ['ObjectTitle' => $this->getModelName()]
             ));
             return null;
         }
@@ -531,13 +581,13 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
         $this->saveFormIntoRecord($data, $form);
 
         $link = '<a href="' . $this->Link('edit') . '">"'
-            . htmlspecialchars($this->record->Title ?? '', ENT_QUOTES)
+            . Convert::raw2xml($this->record->Title ?? '', ENT_QUOTES)
             . '"</a>';
         $message = _t(
             'SilverStripe\\Forms\\GridField\\GridFieldDetailForm.Saved',
             'Saved {name} {link}',
             [
-                'name' => $this->record->i18n_singular_name(),
+                'name' => Convert::raw2xml($this->getModelName()),
                 'link' => $link
             ]
         );
@@ -549,12 +599,12 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
             'Saved {type} "{title}" successfully.',
             [
                 'type' => $this->record->i18n_singular_name(),
-                'title' => Convert::raw2xml($this->record->Title)
+                'title' => $this->record->Title
             ]
         );
 
         $controller = $this->getToplevelController();
-        $controller->getResponse()->addHeader('X-Status', $message);
+        $controller->getResponse()->addHeader('X-Status', rawurlencode($message));
 
         // Redirect after save
         return $this->redirectAfterSave($isNewRecord);
@@ -583,18 +633,30 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
      */
     private function getGridFieldItemAdjacencies(): array
     {
-        $list = $this->getGridField()->getManipulatedList();
-        $paginator = $this->getGridFieldPaginatorState();
-        if (!$paginator) {
+        $paginatorState = $this->getGridFieldPaginatorState();
+        if (!$paginatorState) {
             return [];
         }
-        $currentPage = $paginator->getData('currentPage');
-        $itemsPerPage = $paginator->getData('itemsPerPage');
-
+        $keyStr = '';
+        $data = $this->getGridField()->getState()->toArray();
+        array_walk_recursive($data, function ($v, $k) use (&$keyStr) {
+            if (is_scalar($k) && is_scalar($v)) {
+                $keyStr .= $k . $v;
+            }
+        });
+        $key = md5($keyStr);
+        if (array_key_exists($key, $this->cachedGridFieldItemAdjacencies)) {
+            return $this->cachedGridFieldItemAdjacencies[$key];
+        }
+        $currentPage = $paginatorState->getData('currentPage');
+        $itemsPerPage = $paginatorState->getData('itemsPerPage');
         $limit = $itemsPerPage + 2;
-        $limitOffset = max(0, $itemsPerPage * ($currentPage-1) -1);
-
-        return $list->limit($limit, $limitOffset)->column('ID');
+        $limitOffset = max(0, $itemsPerPage * ($currentPage - 1) - 1);
+        $this->cachedGridFieldItemAdjacencies[$key] = $this->getGridField()
+            ->getManipulatedList()
+            ->limit($limit, $limitOffset)
+            ->column('ID');
+        return $this->cachedGridFieldItemAdjacencies[$key];
     }
 
     /**
@@ -692,6 +754,7 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
      */
     public function getPreviousRecordID()
     {
+        $this->resetAdjacenciesCache();
         return $this->getAdjacentRecordID(-1);
     }
 
@@ -702,6 +765,7 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
      */
     public function getNextRecordID()
     {
+        $this->resetAdjacenciesCache();
         return $this->getAdjacentRecordID(1);
     }
 
@@ -744,12 +808,12 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
     }
 
     /**
-     * Loads the given form data into the underlying dataobject and relation
+     * Loads the given form data into the underlying record and relation
      *
      * @param array $data
      * @param Form $form
      * @throws ValidationException On error
-     * @return DataObject Saved record
+     * @return ViewableData&DataObjectInterface Saved record
      */
     protected function saveFormIntoRecord($data, $form)
     {
@@ -766,7 +830,7 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
             $this->record = $this->record->newClassInstance($newClassName);
         }
 
-        // Save form and any extra saved data into this dataobject.
+        // Save form and any extra saved data into this record.
         // Set writeComponents = true to write has-one relations / join records
         $form->saveInto($this->record);
         // https://github.com/silverstripe/silverstripe-assets/issues/365
@@ -787,8 +851,7 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
      */
     public function doDelete($data, $form)
     {
-        $title = $this->record->Title;
-        if (!$this->record->canDelete()) {
+        if (!$this->record->hasMethod('canDelete') || !$this->record->canDelete()) {
             throw new ValidationException(
                 _t('SilverStripe\\Forms\\GridField\\GridFieldDetailForm.DeletePermissionsFailure', "No delete permissions")
             );
@@ -799,8 +862,8 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
             'SilverStripe\\Forms\\GridField\\GridFieldDetailForm.Deleted',
             'Deleted {type} "{name}"',
             [
-                'type' => $this->record->i18n_singular_name(),
-                'name' => htmlspecialchars($title ?? '', ENT_QUOTES)
+                'type' => Convert::raw2xml($this->getModelName()),
+                'name' => Convert::raw2xml($this->record->Title)
             ]
         );
 
@@ -815,7 +878,7 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
         //when an item is deleted, redirect to the parent controller
         $controller = $this->getToplevelController();
         $controller->getRequest()->addHeader('X-Pjax', 'Content'); // Force a content refresh
-        $controller->getResponse()->addHeader('X-Status', $message);
+        $controller->getResponse()->addHeader('X-Status', rawurlencode($message));
 
         return $controller->redirect($this->getBackLink(), 302); //redirect back to admin section
     }
@@ -870,7 +933,7 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
     }
 
     /**
-     * @return DataObject
+     * @return ViewableData
      */
     public function getRecord()
     {
@@ -883,7 +946,7 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
      * see {@link LeftAndMain->Breadcrumbs()} for details.
      *
      * @param boolean $unlinked
-     * @return ArrayList
+     * @return ArrayList<ArrayData>
      */
     public function Breadcrumbs($unlinked = false)
     {
@@ -891,7 +954,7 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
             return null;
         }
 
-        /** @var ArrayList $items */
+        /** @var ArrayList<ArrayData> $items */
         $items = $this->popupController->Breadcrumbs($unlinked);
 
         if (!$items) {
@@ -906,7 +969,7 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
             ]));
         } else {
             $items->push(ArrayData::create([
-                'Title' => _t('SilverStripe\\Forms\\GridField\\GridField.NewRecord', 'New {type}', ['type' => $this->record->i18n_singular_name()]),
+                'Title' => _t('SilverStripe\\Forms\\GridField\\GridField.NewRecord', 'New {type}', ['type' => $this->getModelName()]),
                 'Link' => false
             ]));
         }
@@ -919,5 +982,53 @@ class GridFieldDetailForm_ItemRequest extends RequestHandler
 
         $this->extend('updateBreadcrumbs', $items);
         return $items;
+    }
+
+    private function getModelName(): string
+    {
+        if ($this->record->hasMethod('i18n_singular_name')) {
+            return $this->record->i18n_singular_name();
+        }
+        return ClassInfo::shortName($this->record);
+    }
+
+    /**
+     * Get Pjax response negotiator so form submission mirrors other form submission in the CMS.
+     * See LeftAndMain::getResponseNegotiator()
+     */
+    private function getResponseNegotiator(DBHTMLText $renderedForm): PjaxResponseNegotiator
+    {
+        return new PjaxResponseNegotiator([
+            'default' => function () use ($renderedForm) {
+                return $renderedForm;
+            },
+            'Content' => function () use ($renderedForm) {
+                return $renderedForm;
+            },
+            'CurrentForm' => function () use ($renderedForm) {
+                return $renderedForm;
+            },
+            'Breadcrumbs' => function () {
+                return $this->renderWith([
+                    'type' => 'Includes',
+                    'SilverStripe\\Admin\\CMSBreadcrumbs'
+                ]);
+            },
+            'ValidationResult' => function () {
+                // Assume valid by default, mirroring LeftAndMain's response negotiator
+                return $this->prepareDataForPjax([
+                    'isValid' => true,
+                    'messages' => '',
+                ]);
+            }
+        ], $this->getToplevelController()->getResponse());
+    }
+
+    /**
+     * Reset the cache used for getGridFieldItemAdjacencies()
+     */
+    private function resetAdjacenciesCache()
+    {
+        $this->cachedGridFieldItemAdjacencies = [];
     }
 }

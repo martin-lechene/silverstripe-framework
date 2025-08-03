@@ -197,10 +197,12 @@ class DataObjectSchemaGenerationTest extends SapphireTest
         $schema = DataObject::getSchema();
 
         // Test with blank entries
-        DBEnum::flushCache();
+        DBEnum::reset();
         $do1 = new TestObject();
         $fields = $schema->databaseFields(TestObject::class, false);
-        $this->assertEquals("DBClassName", $fields['ClassName']);
+        // May be overridden from DBClassName to DBClassNameVarchar by config
+        $expectedClassName = DataObject::config()->get('fixed_fields')['ClassName'];
+        $this->assertEquals($expectedClassName, $fields['ClassName']);
         $this->assertEquals(
             [
                 TestObject::class,
@@ -213,7 +215,7 @@ class DataObjectSchemaGenerationTest extends SapphireTest
         // Test with instance of subclass
         $item1 = new TestIndexObject();
         $item1->write();
-        DBEnum::flushCache();
+        DBEnum::reset();
         $this->assertEquals(
             [
                 TestObject::class,
@@ -226,7 +228,7 @@ class DataObjectSchemaGenerationTest extends SapphireTest
         // Test with instance of main class
         $item2 = new TestObject();
         $item2->write();
-        DBEnum::flushCache();
+        DBEnum::reset();
         $this->assertEquals(
             [
                 TestObject::class,
@@ -241,7 +243,7 @@ class DataObjectSchemaGenerationTest extends SapphireTest
         $item1->write();
         $item2 = new TestObject();
         $item2->write();
-        DBEnum::flushCache();
+        DBEnum::reset();
         $this->assertEquals(
             [
                 TestObject::class,
@@ -253,55 +255,123 @@ class DataObjectSchemaGenerationTest extends SapphireTest
         $item2->delete();
     }
 
-    public function testSortFieldBecomeIndexes()
+    public static function provideSortFieldBecomesIndexes(): array
+    {
+        return [
+            // string sort
+            'string, single column no dir' => [
+                'defaultSort' => 'Sort',
+                'expected' => ['Sort'],
+            ],
+            'string, single column' => [
+                'defaultSort' => 'Sort ASC',
+                'expected' => ['Sort'],
+            ],
+            'string, single column desc' => [
+                'defaultSort' => 'Sort DESC',
+                'expected' => ['Sort'],
+            ],
+            'string, quoted column' => [
+                'defaultSort' => '"Sort" DESC',
+                'expected' => ['Sort'],
+            ],
+            'string, table-prefixed column' => [
+                'defaultSort' => '"DataObjectSchemaGenerationTest_SortedObject"."Sort" ASC',
+                'expected' => ['Sort'],
+            ],
+            'string, multiple columns' => [
+                'defaultSort' => '"Sort" DESC, "Title" ASC',
+                'expected' => ['Sort', 'Title'],
+            ],
+            // array sort
+            'array, single column no dir' => [
+                'defaultSort' => ['Sort'],
+                'expected' => ['Sort'],
+            ],
+            'array, single column' => [
+                'defaultSort' => ['Sort ASC'],
+                'expected' => ['Sort'],
+            ],
+            'array, single column desc' => [
+                'defaultSort' => ['Sort DESC'],
+                'expected' => ['Sort'],
+            ],
+            'array, quoted column' => [
+                'defaultSort' => ['"Sort" DESC'],
+                'expected' => ['Sort'],
+            ],
+            'array, table-prefixed column' => [
+                'defaultSort' => ['"DataObjectSchemaGenerationTest_SortedObject"."Sort" ASC'],
+                'expected' => ['Sort'],
+            ],
+            'array, multiple columns' => [
+                'defaultSort' => ['"Sort" DESC', '"Title" ASC'],
+                'expected' => ['Sort', 'Title'],
+            ],
+            // associative array sort
+            'assoc array, single column' => [
+                'defaultSort' => ['Sort' => 'ASC'],
+                'expected' => ['Sort'],
+            ],
+            'assoc array, single column desc' => [
+                'defaultSort' => ['Sort' => 'DESC'],
+                'expected' => ['Sort'],
+            ],
+            'assoc array, quoted column' => [
+                'defaultSort' => ['"Sort"' => 'DESC'],
+                'expected' => ['Sort'],
+            ],
+            'assoc array, table-prefixed column' => [
+                'defaultSort' => ['"DataObjectSchemaGenerationTest_SortedObject"."Sort"' => 'ASC'],
+                'expected' => ['Sort'],
+            ],
+            'assoc array, multiple columns' => [
+                'defaultSort' => ['"Sort"' => 'DESC', '"Title"' => 'ASC'],
+                'expected' => ['Sort', 'Title'],
+            ],
+            // DBText cannot be used in indexes
+            'a few different field types in sort' => [
+                'defaultSort' => [
+                    '"Sort"' => 'DESC',
+                    '"SomeDBText"' => 'DESC',
+                    '"SomeDBHtmlText"' => 'ASC',
+                    'SomeDBHtmlVarchar' => 'ASC',
+                    'Title' => 'ASC'
+                ],
+                'expected' => ['Sort', 'SomeDBHtmlVarchar', 'Title'],
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideSortFieldBecomesIndexes
+     */
+    public function testSortFieldBecomeIndexes(string|array $defaultSort, array $expected)
     {
         $indexes = DataObject::getSchema()->databaseIndexes(SortedObject::class);
         $this->assertContains([
             'type' => 'index',
             'columns' => ['Sort'],
         ], $indexes);
-        DataObject::getSchema()->reset();
-        Config::inst()->set(SortedObject::class, 'default_sort', 'Sort ASC');
-        $indexes = DataObject::getSchema()->databaseIndexes(SortedObject::class);
-        $this->assertContains([
-            'type' => 'index',
-            'columns' => ['Sort'],
-        ], $indexes);
-        DataObject::getSchema()->reset();
-        Config::inst()->set(SortedObject::class, 'default_sort', 'Sort DESC');
-        $indexes = DataObject::getSchema()->databaseIndexes(SortedObject::class);
-        $this->assertContains([
-            'type' => 'index',
-            'columns' => ['Sort'],
-        ], $indexes);
-        DataObject::getSchema()->reset();
-        Config::inst()->set(SortedObject::class, 'default_sort', '"Sort" DESC');
-        $indexes = DataObject::getSchema()->databaseIndexes(SortedObject::class);
-        $this->assertContains([
-            'type' => 'index',
-            'columns' => ['Sort'],
-        ], $indexes);
-        DataObject::getSchema()->reset();
-        Config::inst()->set(SortedObject::class, 'default_sort', '"DataObjectSchemaGenerationTest_SortedObject"."Sort" ASC');
-        $indexes = DataObject::getSchema()->databaseIndexes(SortedObject::class);
-        $this->assertContains([
-            'type' => 'index',
-            'columns' => ['Sort'],
-        ], $indexes);
-        DataObject::getSchema()->reset();
-        Config::inst()->set(SortedObject::class, 'default_sort', '"Sort" DESC, "Title" ASC');
-        $indexes = DataObject::getSchema()->databaseIndexes(SortedObject::class);
-        $this->assertContains([
-            'type' => 'index',
-            'columns' => ['Sort'],
-        ], $indexes);
-        $this->assertContains([
+        $this->assertNotContains([
             'type' => 'index',
             'columns' => ['Title'],
         ], $indexes);
         DataObject::getSchema()->reset();
-        // make sure that specific indexes aren't overwritten
-        Config::inst()->merge(SortedObject::class, 'indexes', [
+
+        // Check sort is respected for indexes
+        SortedObject::config()->set('default_sort', $defaultSort);
+        $indexes = DataObject::getSchema()->databaseIndexes(SortedObject::class);
+        foreach ($expected as $column) {
+            $this->assertContains([
+                'type' => 'index',
+                'columns' => [$column],
+            ], $indexes);
+        }
+
+        // Make sure that explicitly defined indexes override sort index
+        DataObject::getSchema()->reset();
+        SortedObject::config()->merge('indexes', [
             'Sort' => [
                 'type' => 'unique',
                 'columns' => ['Sort'],

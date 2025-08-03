@@ -3,11 +3,14 @@
 namespace SilverStripe\Dev;
 
 use BadMethodCallException;
+use RuntimeException;
 use SilverStripe\Control\Director;
 use SilverStripe\Core\Environment;
 use SilverStripe\Core\Injector\InjectionCreator;
 use SilverStripe\Core\Injector\InjectorLoader;
 use SilverStripe\Core\Manifest\Module;
+use SilverStripe\Core\Path;
+use SilverStripe\SupportedModules\MetaData;
 
 /**
  * Handles raising an notice when accessing a deprecated method, class, configuration, or behaviour.
@@ -53,7 +56,7 @@ class Deprecation
     /**
      * @internal
      */
-    private static bool $insideWithNoReplacement = false;
+    private static bool $insideNoticeSuppression = false;
 
     /**
      * @internal
@@ -76,6 +79,18 @@ class Deprecation
      * @internal
      */
     private static bool $showNoReplacementNotices = false;
+
+    /**
+     * @internal
+     */
+    private static bool $showNoticesCalledFromSupportedCode = false;
+
+    /**
+     * Cache of supported module directories, read from silverstripe/supported-modules repositories.json
+     *
+     * @internal
+     */
+    private static array $supportedModuleDirectories = [];
 
     /**
      * Enable throwing deprecation warnings. By default, this excludes warnings for
@@ -103,22 +118,32 @@ class Deprecation
     }
 
     /**
-     * Used to wrap deprecated methods and deprecated config get()/set() that will be removed
-     * in the next major version with no replacement. This is done to surpress deprecation notices
-     * by for calls from the vendor dir to deprecated code that projects have no ability to change
+     * Used to wrap deprecated methods and deprecated config get()/set() called from the vendor
+     * dir that projects have no ability to change.
      *
      * @return mixed
+     * @deprecated 5.4.0 Use withSuppressedNotice() instead
      */
     public static function withNoReplacement(callable $func)
     {
-        if (self::$insideWithNoReplacement) {
+        Deprecation::notice('5.4.0', 'Use withSuppressedNotice() instead');
+        return Deprecation::withSuppressedNotice($func);
+    }
+
+    /**
+     * Used to wrap deprecated methods and deprecated config get()/set() called from the vendor
+     * dir that projects have no ability to change.
+     */
+    public static function withSuppressedNotice(callable $func): mixed
+    {
+        if (Deprecation::$insideNoticeSuppression) {
             return $func();
         }
-        self::$insideWithNoReplacement = true;
+        Deprecation::$insideNoticeSuppression = true;
         try {
             return $func();
         } finally {
-            self::$insideWithNoReplacement = false;
+            Deprecation::$insideNoticeSuppression = false;
         }
     }
 
@@ -132,13 +157,22 @@ class Deprecation
      */
     protected static function get_called_method_from_trace($backtrace, $level = 1)
     {
+        if ($backtrace === null) {
+            return '';
+        }
         $level = (int)$level;
         if (!$level) {
             $level = 1;
         }
+        $called = Deprecation::get_called_from_trace($backtrace, $level);
+        return ($called['class'] ?? '') . ($called['type'] ?? '') . ($called['function'] ?? '');
+    }
+
+    private static function get_called_from_trace(array $backtrace, int $level): array
+    {
         $newLevel = $level;
-        // handle closures inside withNoReplacement()
-        if (self::$insideWithNoReplacement
+        // handle closures inside withSuppressedNotice()
+        if (Deprecation::$insideNoticeSuppression
             && substr($backtrace[$newLevel]['function'], -strlen('{closure}')) === '{closure}'
         ) {
             $newLevel = $newLevel + 2;
@@ -153,8 +187,54 @@ class Deprecation
         if ($level == 4 && ($backtrace[$newLevel]['class'] ?? '') === InjectionCreator::class) {
             $newLevel = $newLevel + 4;
         }
+        // handle noticeWithNoReplacment()
+        foreach ($backtrace as $trace) {
+            if (($trace['class'] ?? '') === Deprecation::class
+                && ($trace['function'] ?? '') === 'noticeWithNoReplacment'
+            ) {
+                $newLevel = $newLevel + 1;
+                break;
+            }
+        }
         $called = $backtrace[$newLevel] ?? [];
-        return ($called['class'] ?? '') . ($called['type'] ?? '') . ($called['function'] ?? '');
+        return $called;
+    }
+
+    private static function isCalledFromSupportedCode(?array $backtrace): bool
+    {
+        if ($backtrace === null) {
+            return false;
+        }
+        $called = Deprecation::get_called_from_trace($backtrace, 1);
+        $file = $called['file'] ?? '';
+        if (!$file) {
+            return false;
+        }
+        return Deprecation::fileIsInSupportedModule($file);
+    }
+
+    /**
+     * Check whether a file (path to file) is in a supported module
+     */
+    public static function fileIsInSupportedModule(string $file): bool
+    {
+        // Cache the supported modules list
+        if (count(Deprecation::$supportedModuleDirectories) === 0) {
+            // Do not make a network request when fetching metadata which could slow down a website
+            // While there is a small risk of the list being out of date, there is minimal downside to this
+            $metaData = MetaData::getAllRepositoryMetaData(fromRemote: false);
+            $dirs = array_map(fn($module) => "/vendor/{$module['packagist']}/", $metaData['supportedModules']);
+            // This is a special case for silverstripe-framework when running in CI
+            // Needed because module is run in the root folder rather than in the vendor folder
+            $dirs[] = '/silverstripe-framework/';
+            Deprecation::$supportedModuleDirectories = $dirs;
+        }
+        foreach (Deprecation::$supportedModuleDirectories as $dir) {
+            if (str_contains($file, $dir)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static function isEnabled(): bool
@@ -184,7 +264,7 @@ class Deprecation
      */
     public static function isTriggeringError(): bool
     {
-        return self::$isTriggeringError;
+        return Deprecation::$isTriggeringError;
     }
 
     /**
@@ -195,7 +275,7 @@ class Deprecation
      */
     public static function setShouldShowForHttp(bool $value): void
     {
-        self::$shouldShowForHttp = $value;
+        Deprecation::$shouldShowForHttp = $value;
     }
 
     /**
@@ -206,7 +286,7 @@ class Deprecation
      */
     public static function setShouldShowForCli(bool $value): void
     {
-        self::$shouldShowForCli = $value;
+        Deprecation::$shouldShowForCli = $value;
     }
 
     /**
@@ -217,9 +297,9 @@ class Deprecation
     {
         if (Environment::hasEnv('SS_DEPRECATION_SHOW_HTTP')) {
             $envVar = Environment::getEnv('SS_DEPRECATION_SHOW_HTTP');
-            return self::varAsBoolean($envVar);
+            return Deprecation::varAsBoolean($envVar);
         }
-        return self::$shouldShowForHttp;
+        return Deprecation::$shouldShowForHttp;
     }
 
     /**
@@ -230,34 +310,54 @@ class Deprecation
     {
         if (Environment::hasEnv('SS_DEPRECATION_SHOW_CLI')) {
             $envVar = Environment::getEnv('SS_DEPRECATION_SHOW_CLI');
-            return self::varAsBoolean($envVar);
+            return Deprecation::varAsBoolean($envVar);
         }
-        return self::$shouldShowForCli;
+        return Deprecation::$shouldShowForCli;
+    }
+
+    /**
+     * If true, deprecation warnings will be shown for deprecated code which is called by core Silverstripe modules.
+     */
+    public static function getShowNoticesCalledFromSupportedCode(): bool
+    {
+        return Deprecation::$showNoticesCalledFromSupportedCode;
+    }
+
+    /**
+     * Set whether deprecation warnings will be shown for deprecated code which is called by core Silverstripe modules.
+     */
+    public static function setShowNoticesCalledFromSupportedCode(bool $value): void
+    {
+        Deprecation::$showNoticesCalledFromSupportedCode = $value;
     }
 
     public static function outputNotices(): void
     {
-        if (!self::isEnabled()) {
+        if (!Deprecation::isEnabled()) {
             return;
         }
 
         $count = 0;
-        $origCount = count(self::$userErrorMessageBuffer);
+        $origCount = count(Deprecation::$userErrorMessageBuffer);
         while ($origCount > $count) {
             $count++;
-            $arr = array_shift(self::$userErrorMessageBuffer);
+            $arr = array_shift(Deprecation::$userErrorMessageBuffer);
             $message = $arr['message'];
-            $calledInsideWithNoReplacement = $arr['calledInsideWithNoReplacement'];
-            if ($calledInsideWithNoReplacement && !self::$showNoReplacementNotices) {
+            $calledWithNoticeSuppression = $arr['calledWithNoticeSuppression'];
+            $isCalledFromSupportedCode = $arr['isCalledFromSupportedCode'];
+            if ($calledWithNoticeSuppression && !Deprecation::$showNoReplacementNotices) {
                 continue;
             }
-            self::$isTriggeringError = true;
+            if ($isCalledFromSupportedCode && !Deprecation::$showNoticesCalledFromSupportedCode) {
+                continue;
+            }
+            Deprecation::$isTriggeringError = true;
             user_error($message, E_USER_DEPRECATED);
-            self::$isTriggeringError = false;
+            Deprecation::$isTriggeringError = false;
         }
         // Make absolutely sure the buffer is empty - array_shift seems to leave an item in the array
         // if we're not using numeric keys.
-        self::$userErrorMessageBuffer = [];
+        Deprecation::$userErrorMessageBuffer = [];
     }
 
     /**
@@ -278,17 +378,21 @@ class Deprecation
         // calls something else that calls Deprecation::notice()
         try {
             $data = null;
-            if ($scope === self::SCOPE_CONFIG) {
+            if ($scope === Deprecation::SCOPE_CONFIG) {
                 // Deprecated config set via yaml will only be shown in the browser when using ?flush=1
                 // It will not show in CLI when running dev/build flush=1
                 $data = [
                     'key' => sha1($string),
                     'message' => $string,
-                    'calledInsideWithNoReplacement' => self::$insideWithNoReplacement
+                    // Setting to `false` as here as any SCOPE_CONFIG notices from supported modules have
+                    // already been filtered out if needed if they came from a supported module in
+                    // SilverStripe\Config\Transformer\YamlTransformer::checkForDeprecatedConfig()
+                    'isCalledFromSupportedCode' => false,
+                    'calledWithNoticeSuppression' => Deprecation::$insideNoticeSuppression
                 ];
             } else {
-                if (!self::isEnabled()) {
-                    // Do not add to self::$userErrorMessageBuffer, as the backtrace is too expensive
+                if (!Deprecation::isEnabled()) {
+                    // Do not add to Deprecation::$userErrorMessageBuffer, as the backtrace is too expensive
                     return;
                 }
 
@@ -298,7 +402,7 @@ class Deprecation
                 // Get the calling scope
                 if ($scope == Deprecation::SCOPE_METHOD) {
                     $backtrace = debug_backtrace(0);
-                    $caller = self::get_called_method_from_trace($backtrace, 1);
+                    $caller = Deprecation::get_called_method_from_trace($backtrace, 1);
                 } elseif ($scope == Deprecation::SCOPE_CLASS) {
                     $backtrace = debug_backtrace(0);
                     $caller = isset($backtrace[1]['class']) ? $backtrace[1]['class'] : '(unknown)';
@@ -310,31 +414,34 @@ class Deprecation
                     $string .= ".";
                 }
 
-                $level = self::$insideWithNoReplacement ? 4 : 2;
-                $string .= " Called from " . self::get_called_method_from_trace($backtrace, $level) . '.';
-
+                $level = Deprecation::$insideNoticeSuppression ? 4 : 2;
+                $calledFrom = Deprecation::get_called_method_from_trace($backtrace, $level);
+                if ($calledFrom) {
+                    $string .= " Called from $calledFrom.";
+                }
                 if ($caller) {
                     $string = $caller . ' is deprecated.' . ($string ? ' ' . $string : '');
                 }
                 $data = [
                     'key' => sha1($string),
                     'message' => $string,
-                    'calledInsideWithNoReplacement' => self::$insideWithNoReplacement
+                    'isCalledFromSupportedCode' => Deprecation::isCalledFromSupportedCode($backtrace),
+                    'calledWithNoticeSuppression' => Deprecation::$insideNoticeSuppression
                 ];
             }
-            if ($data && !array_key_exists($data['key'], self::$userErrorMessageBuffer)) {
+            if ($data && !array_key_exists($data['key'], Deprecation::$userErrorMessageBuffer)) {
                 // Store de-duplicated data in a buffer to be outputted when outputNotices() is called
-                self::$userErrorMessageBuffer[$data['key']] = $data;
+                Deprecation::$userErrorMessageBuffer[$data['key']] = $data;
 
                 // Use a shutdown function rather than immediately calling user_error() so that notices
                 // do not interfere with setting session varibles i.e. headers already sent error
                 // it also means the deprecation notices appear below all phpunit output in CI
                 // which is far nicer than having it spliced between phpunit output
-                if (!self::$haveSetShutdownFunction && self::isEnabled()) {
+                if (!Deprecation::$haveSetShutdownFunction && Deprecation::isEnabled()) {
                     register_shutdown_function(function () {
-                        self::outputNotices();
+                        Deprecation::outputNotices();
                     });
-                    self::$haveSetShutdownFunction = true;
+                    Deprecation::$haveSetShutdownFunction = true;
                 }
             }
         } catch (BadMethodCallException $e) {
@@ -348,6 +455,23 @@ class Deprecation
         } finally {
             static::$insideNotice = false;
         }
+    }
+
+    /**
+     * Shorthand method to create a suppressed notice for something with no immediate replacement.
+     * If $message is empty, then a standardised message will be used
+     */
+    public static function noticeWithNoReplacment(
+        string $atVersion,
+        string $message = '',
+        int $scope = Deprecation::SCOPE_METHOD
+    ): void {
+        if ($message === '') {
+            $message = 'Will be removed without equivalent functionality to replace it in a future major release.';
+        }
+        Deprecation::withSuppressedNotice(
+            fn() => Deprecation::notice($atVersion, $message, $scope)
+        );
     }
 
     private static function varAsBoolean($val): bool

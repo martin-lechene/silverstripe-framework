@@ -17,7 +17,6 @@ es:
   SilverStripe\Control\RequestProcessor:
     INVALID_REQUEST: 'Solicitud no válida'
   SilverStripe\Forms\CheckboxField:
-    NOANSWER: 'No'
     YESANSWER: Sí
   SilverStripe\Forms\CheckboxSetField_ss:
     NOOPTIONSAVAILABLE: 'No hay opciones disponibles'
@@ -88,6 +87,8 @@ es:
     Saved: 'Guardado {name} {link}'
   SilverStripe\Forms\GridField\GridFieldEditButton:
     EDIT: Editar
+  SilverStripe\Forms\GridField\GridFieldFilterHeader:
+    Search_Default: Buscar
   SilverStripe\Forms\GridField\GridFieldPaginator:
     OF: de
     Page: Página
@@ -103,12 +104,16 @@ es:
   SilverStripe\Forms\NullableField:
     IsNullLabel: 'Es Nulo'
   SilverStripe\Forms\NumericField:
-    VALIDATION: '''{value}'' no es un número, sólo números pueden ser aceptados para este campo'
+    VALIDATION: "'{value}' no es un número, sólo números pueden ser aceptados para este campo"
   SilverStripe\Forms\TextField:
     VALIDATEMAXLENGTH: 'El valor para {name} no puede exceder los {maxLength} caracteres de longitud'
   SilverStripe\Forms\TimeField:
     VALIDATEFORMAT: 'Por favor, introduzca un formato de tiempo válido ({format})'
+  SilverStripe\Forms\UrlField:
+    INVALID: 'Por favor, ingrese una URL válida'
   SilverStripe\ORM\DataObject:
+    FILTER_WITHINRANGE_FROM: De
+    FILTER_WITHINRANGE_TO: Hasta
     PLURALNAME: 'Objetos de Datos'
     PLURALS:
       many: '{count} Objetos de Datos'
@@ -117,7 +122,6 @@ es:
     SINGULARNAME: 'Objeto de Dato'
   SilverStripe\ORM\FieldType\DBBoolean:
     ANY: Cualquiera
-    NOANSWER: 'No'
     YESANSWER: Sí
   SilverStripe\ORM\FieldType\DBDate:
     DAYS_SHORT_PLURALS:
@@ -187,7 +191,6 @@ es:
       one: 'Un Grupo'
       other: '{count} Grupos'
     Parent: 'Grupo Padre'
-    ROLES: Roles
     ROLESDESCRIPTION: 'Las reglas son conjuntos predefinidos de permisos, y pueden ser asignadas a grupos.<br /> Pueden ser heredadas desde grupos padres si es necesario.'
     RolesAddEditLink: 'Gestionar Roles'
     SINGULARNAME: Grupo
@@ -199,7 +202,6 @@ es:
     has_many_Permissions: Permisos
     has_one_Parent: Padre
     many_many_Members: Miembros
-    many_many_Roles: Roles
   SilverStripe\Security\LoginAttempt:
     Email: 'Correo electrónico'
     IP: 'Dirección IP'
@@ -298,7 +300,6 @@ es:
     FromRoleOnGroup: 'heredado desde la regla "{roletitle}" del grupo "{grouptitle}"'
   SilverStripe\Security\PermissionRole:
     OnlyAdminCanApply: 'Sólo el administrador puede aplicar'
-    PLURALNAME: Roles
     PLURALS:
       many: '{count} Roles'
       one: 'Un Rol'
@@ -337,3 +338,8 @@ es:
     LOSTPASSWORDHEADER: '¿Contraseña Perdida?'
     NOTEPAGESECURED: 'Esa página está protegida. Introduzca sus datos de acreditación a continuación y lo enviaremos a ella en un momento.'
     NOTERESETPASSWORD: 'Introduzca su dirección de e-mail, y le enviaremos un enlace, con el cual podrá restaurar su contraseña'
+  SilverStripe\Security\Validation\PasswordValidator:
+    PREVPASSWORD: 'Ya habías utilizado esa contraseña en el pasado, por favor usa uno nuevo'
+  SilverStripe\Security\Validation\RulesPasswordValidator:
+    LOWCHARSTRENGTH: 'Necesitas aumentar la complejidad de tu contraseña agregando los siguientes caracteres: {chars}'
+    TOOSHORT: 'Tu contraseña es muy corta'

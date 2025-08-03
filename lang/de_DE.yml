@@ -49,6 +49,7 @@ de_DE:
     EDIT: Bearbeiten
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search: 'Suche "{name}"'
+    Search_Default: Suche
   SilverStripe\Forms\GridField\GridFieldPaginator:
     Page: Seite
     View: Anzeigen
@@ -59,6 +60,7 @@ de_DE:
     FIELDLABELCURRENCY: Währung
     INVALID_CURRENCY: 'Die Währung {currency} ist nicht in der Liste der erlauben Währungen'
   SilverStripe\ORM\DataObject:
+    FILTER_WITHINRANGE_FROM: Formular
     PLURALNAME: DatenObjekte
     PLURALS:
       one: 'Ein DatenObjekt'
@@ -85,7 +87,6 @@ de_DE:
       one: '{count} Sekunde'
       other: '{count} Sekunden'
     TIMEDIFFAGO: 'vor {difference}'
-    TIMEDIFFIN: 'in {difference}'
     YEARS_SHORT_PLURALS:
       one: '{count} Jahr'
       other: '{count} Jahre'
@@ -130,8 +131,6 @@ de_DE:
       one: 'Ein Loginversuch'
       other: '{count} Loginversuche'
     SINGULARNAME: Loginversuch
-    Status: Status
-    db_Status: Status
     has_one_Member: Mitglied
   SilverStripe\Security\Member:
     ADDGROUP: 'Gruppe hinzufügen'
@@ -170,7 +169,6 @@ de_DE:
     db_Password: Passwort
     has_one_Member: Mitglied
   SilverStripe\Security\Permission:
-    AdminGroup: Administrator
     PLURALNAME: Rechte
     db_Type: Typ
     has_one_Group: Gruppe

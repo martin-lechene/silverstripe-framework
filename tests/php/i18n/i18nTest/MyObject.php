@@ -24,6 +24,8 @@ class MyObject extends DataObject implements TestOnly
 
     private static $plural_name = "My Objects";
 
+    private static $class_description = 'A class that represents objects';
+
     public function provideI18nEntities()
     {
         $entities = parent::provideI18nEntities();

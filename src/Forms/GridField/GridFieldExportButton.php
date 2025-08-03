@@ -3,12 +3,13 @@
 namespace SilverStripe\Forms\GridField;
 
 use League\Csv\Writer;
+use LogicException;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\ORM\DataList;
-use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\ArrayList;
+use SilverStripe\View\ViewableData;
 
 /**
  * Adds an "Export list" button to the bottom of a {@link GridField}.
@@ -149,13 +150,20 @@ class GridFieldExportButton extends AbstractGridFieldComponent implements GridFi
             return $this->exportColumns;
         }
 
-        /** @var GridFieldDataColumns $dataCols */
         $dataCols = $gridField->getConfig()->getComponentByType(GridFieldDataColumns::class);
         if ($dataCols) {
             return $dataCols->getDisplayFields($gridField);
         }
 
-        return DataObject::singleton($gridField->getModelClass())->summaryFields();
+        $modelClass = $gridField->getModelClass();
+        $singleton = singleton($modelClass);
+        if (!$singleton->hasMethod('summaryFields')) {
+            throw new LogicException(
+                'Cannot dynamically determine columns. Add a GridFieldDataColumns component to your GridField'
+                . " or implement a summaryFields() method on $modelClass"
+            );
+        }
+        return $singleton->summaryFields();
     }
 
     /**
@@ -215,18 +223,17 @@ class GridFieldExportButton extends AbstractGridFieldComponent implements GridFi
             }
         }
 
-        /** @var GridFieldDataColumns|null $gridFieldColumnsComponent */
         $gridFieldColumnsComponent = $gridField->getConfig()->getComponentByType(GridFieldDataColumns::class);
         $columnsHandled = ($gridFieldColumnsComponent)
             ? $gridFieldColumnsComponent->getColumnsHandled($gridField)
             : [];
 
-        /** @var ArrayList|DataList $items */
+        /** @var SS_List<ViewableData> $items */
         // Remove limit as the list may be paginated, we want the full list for the export
         $items = $items->limit(null);
 
-        /** @var DataObject $item */
         foreach ($items as $item) {
+            // Assume item can be viewed if canView() isn't implemented
             if (!$item->hasMethod('canView') || $item->canView()) {
                 $columnData = [];
 

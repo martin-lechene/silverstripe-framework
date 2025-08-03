@@ -48,6 +48,7 @@ class TimeField extends TextField
      * to detect invalid values.
      *
      * @var mixed
+     * @deprecated 5.4.0 Use $value instead
      */
     protected $rawValue = null;
 
@@ -372,7 +373,6 @@ class TimeField extends TextField
      */
     public function performReadonlyTransformation()
     {
-        /** @var TimeField_Readonly $result */
         $result = $this->castedCopy(TimeField_Readonly::class);
         $result
             ->setValue(false)

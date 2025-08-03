@@ -2,6 +2,7 @@
 
 namespace SilverStripe\Security;
 
+use InvalidArgumentException;
 use LogicException;
 use Page;
 use ReflectionClass;
@@ -164,6 +165,12 @@ class Security extends Controller implements TemplateGlobalProvider
     private static $login_recording = false;
 
     /**
+     * Minimum execution time in milliseconds for sensitive execution paths.
+     * Helps to protect against time-based enumeration attacks.
+     */
+    private static int $secure_min_execution_time = 1000;
+
+    /**
      * @var boolean If set to TRUE or FALSE, {@link database_is_ready()}
      * will always return FALSE. Used for unit testing.
      */
@@ -253,7 +260,6 @@ class Security extends Controller implements TemplateGlobalProvider
     {
         $authenticators = $this->getAuthenticators();
 
-        /** @var Authenticator $authenticator */
         foreach ($authenticators as $name => $authenticator) {
             if (!($authenticator->supportedServices() & $service)) {
                 unset($authenticators[$name]);
@@ -307,7 +313,7 @@ class Security extends Controller implements TemplateGlobalProvider
      */
     public static function permissionFailure($controller = null, $messageSet = null): HTTPResponse
     {
-        self::set_ignore_disallowed_actions(true);
+        Security::set_ignore_disallowed_actions(true);
 
         // Parse raw message / escape type
         $parseMessage = function ($message) {
@@ -438,7 +444,7 @@ class Security extends Controller implements TemplateGlobalProvider
      */
     public static function setCurrentUser($currentUser = null)
     {
-        self::$currentUser = $currentUser;
+        Security::$currentUser = $currentUser;
     }
 
     /**
@@ -446,7 +452,7 @@ class Security extends Controller implements TemplateGlobalProvider
      */
     public static function getCurrentUser()
     {
-        return self::$currentUser;
+        return Security::$currentUser;
     }
 
     /**
@@ -948,7 +954,6 @@ class Security extends Controller implements TemplateGlobalProvider
     {
         $handlers = [];
         $authenticators = $this->getApplicableAuthenticators(Authenticator::RESET_PASSWORD);
-        /** @var Authenticator $authenticator */
         foreach ($authenticators as $authenticator) {
             $handlers[] = $authenticator->getLostPasswordHandler(
                 Controller::join_links($this->Link(), 'lostpassword')
@@ -977,7 +982,6 @@ class Security extends Controller implements TemplateGlobalProvider
      */
     public function changepassword()
     {
-        /** @var array|Authenticator[] $authenticators */
         $authenticators = $this->getApplicableAuthenticators(Authenticator::CHANGE_PASSWORD);
         $handlers = [];
         foreach ($authenticators as $authenticator) {
@@ -1063,7 +1067,7 @@ class Security extends Controller implements TemplateGlobalProvider
     {
         // Fall back to the default encryption algorithm
         if (!$algorithm) {
-            $algorithm = self::config()->get('password_encryption_algorithm');
+            $algorithm = static::config()->get('password_encryption_algorithm');
         }
 
         $encryptor = PasswordEncryptor::create_for_algorithm($algorithm);
@@ -1088,12 +1092,12 @@ class Security extends Controller implements TemplateGlobalProvider
     public static function database_is_ready()
     {
         // Used for unit tests
-        if (self::$force_database_is_ready !== null) {
-            return self::$force_database_is_ready;
+        if (Security::$force_database_is_ready !== null) {
+            return Security::$force_database_is_ready;
         }
 
-        if (self::$database_is_ready) {
-            return self::$database_is_ready;
+        if (Security::$database_is_ready) {
+            return Security::$database_is_ready;
         }
 
         $requiredClasses = ClassInfo::dataClassesFor(Member::class);
@@ -1129,7 +1133,7 @@ class Security extends Controller implements TemplateGlobalProvider
                 return false;
             }
         }
-        self::$database_is_ready = true;
+        Security::$database_is_ready = true;
 
         return true;
     }
@@ -1139,8 +1143,8 @@ class Security extends Controller implements TemplateGlobalProvider
      */
     public static function clear_database_is_ready()
     {
-        self::$database_is_ready = null;
-        self::$force_database_is_ready = null;
+        Security::$database_is_ready = null;
+        Security::$force_database_is_ready = null;
     }
 
     /**
@@ -1150,7 +1154,7 @@ class Security extends Controller implements TemplateGlobalProvider
      */
     public static function force_database_is_ready($isReady)
     {
-        self::$force_database_is_ready = $isReady;
+        Security::$force_database_is_ready = $isReady;
     }
 
     /**
@@ -1179,12 +1183,12 @@ class Security extends Controller implements TemplateGlobalProvider
      */
     public static function set_ignore_disallowed_actions($flag)
     {
-        self::$ignore_disallowed_actions = $flag;
+        Security::$ignore_disallowed_actions = $flag;
     }
 
     public static function ignore_disallowed_actions()
     {
-        return self::$ignore_disallowed_actions;
+        return Security::$ignore_disallowed_actions;
     }
 
     /**
@@ -1196,7 +1200,7 @@ class Security extends Controller implements TemplateGlobalProvider
      */
     public static function login_url()
     {
-        return Controller::join_links(Director::baseURL(), self::config()->get('login_url'));
+        return Controller::join_links(Director::baseURL(), static::config()->get('login_url'));
     }
 
 
@@ -1209,7 +1213,7 @@ class Security extends Controller implements TemplateGlobalProvider
      */
     public static function logout_url()
     {
-        $logoutUrl = Controller::join_links(Director::baseURL(), self::config()->get('logout_url'));
+        $logoutUrl = Controller::join_links(Director::baseURL(), static::config()->get('logout_url'));
         return SecurityToken::inst()->addToUrl($logoutUrl);
     }
 
@@ -1222,7 +1226,44 @@ class Security extends Controller implements TemplateGlobalProvider
      */
     public static function lost_password_url()
     {
-        return Controller::join_links(Director::baseURL(), self::config()->get('lost_password_url'));
+        return Controller::join_links(Director::baseURL(), static::config()->get('lost_password_url'));
+    }
+
+    /**
+     * Ensure execution of a callback takes some minimum amount of time by inserting a delay if that execution
+     * time is not elapsed.
+     *
+     * This helps to prevent time-based enumeration attacks by making execution of a sensitive code path always
+     * take the same amount of time. Note that if $minExecutionTime is too low, the enumeration attack will still
+     * be possible - but if it is too high, it could impact the user experience.
+     *
+     * @param integer $minExecutionTime The minimum amount of time in milliseconds that execution should take.
+     * If 0, the secure_min_execution_time configuration property value will be used.
+     * @return mixed The value returned from the callback, if any.
+     */
+    public static function withMinimumExecutionTime(callable $callback, int $minExecutionTime = 0): mixed
+    {
+        if ($minExecutionTime < 0) {
+            throw new InvalidArgumentException('$minExecutionTime must not be negative');
+        }
+        // Start capturing execution time
+        $startTime = hrtime(true);
+        // Execute callback
+        $retVal = $callback();
+        $stopTime = hrtime(true);
+        // Delay by remaining execution time
+        if (!$minExecutionTime) {
+            $minExecutionTime = Security::config()->get('secure_min_execution_time');
+        }
+        // $timeTaken gets converted from nanoseconds to microseconds
+        // $minExecutionTime gets converted from milliseconds to microseconds
+        // $waitFor gets cast to int for use in usleep.
+        $timeTaken = ($stopTime - $startTime) / 1000;
+        $waitFor = (int) round(($minExecutionTime * 1000) - $timeTaken);
+        if ($waitFor > 0) {
+            usleep($waitFor);
+        }
+        return $retVal;
     }
 
     /**

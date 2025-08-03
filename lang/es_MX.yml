@@ -62,6 +62,8 @@ es_MX:
     Save: Guardar
   SilverStripe\Forms\GridField\GridFieldEditButton:
     EDIT: Editar
+  SilverStripe\Forms\GridField\GridFieldFilterHeader:
+    Search_Default: Buscar
   SilverStripe\Forms\GridField\GridFieldPaginator:
     Page: Página
     View: Ver
@@ -73,10 +75,11 @@ es_MX:
   SilverStripe\Forms\NullableField:
     IsNullLabel: 'Es Nulo'
   SilverStripe\Forms\NumericField:
-    VALIDATION: '''{value}'' no es un número, solo números son aceptados por este campo'
+    VALIDATION: "'{value}' no es un número, solo números son aceptados por este campo"
   SilverStripe\Forms\TimeField:
     VALIDATEFORMAT: 'Por favor ingresar un formato válido de fecha ({format})'
   SilverStripe\ORM\DataObject:
+    FILTER_WITHINRANGE_TO: Hasta
     PLURALNAME: 'Datos de objetos'
     SINGULARNAME: 'Datos del objeto'
   SilverStripe\ORM\FieldType\DBBoolean:
@@ -108,7 +111,6 @@ es_MX:
     PLURALNAME: Grupos
     Parent: 'Grupo ascendente'
     RolesAddEditLink: 'Agregar/modificar roles'
-    SINGULARNAME: Group
     Sort: 'Orden de Clasificación'
     db_Description: Descripción
     db_Title: Título
@@ -149,7 +151,6 @@ es_MX:
     ValidationIdentifierFailed: 'No se puede sobreescribir el miembro existente  #{id} con el identificador idéntico ({name} = {value}))'
     YOUROLDPASSWORD: 'Contraseña anterior'
     belongs_many_many_Groups: Grupos
-    db_Email: Email
     db_FirstName: Nombre
     db_Locale: 'Interfaz Local'
     db_LockedOutUntil: 'Bloqueado hasta'
@@ -171,7 +172,6 @@ es_MX:
     PERMISSIONS_CATEGORY: 'Roles y permisos de acceso'
     PLURALNAME: Permisos
     db_Type: Tipo
-    has_one_Group: Group
   SilverStripe\Security\PermissionCheckboxSetField:
     FromRoleOnGroup: 'heredado del rol "{roletitle}" en el grupo "{grouptitle}"'
   SilverStripe\Security\PermissionRole:

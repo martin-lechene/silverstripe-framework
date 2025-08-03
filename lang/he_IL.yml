@@ -1,7 +1,6 @@
 he_IL:
   SilverStripe\AssetAdmin\Forms\UploadField:
     Dimensions: ממדים
-    EDIT: Edit
   SilverStripe\Control\ChangePasswordEmail_ss:
     CHANGEPASSWORDTEXT1: 'שינית את הסיסמא עבור'
     HELLO: היי
@@ -26,15 +25,14 @@ he_IL:
     Create: יצירה
     Delete: מחק
     Save: שמור
-  SilverStripe\Forms\GridField\GridFieldEditButton:
-    EDIT: Edit
+  SilverStripe\Forms\GridField\GridFieldFilterHeader:
+    Search_Default: חיפוש
   SilverStripe\Forms\GridField\GridFieldPaginator:
     OF: מתוך
     Page: עמוד
-    View: View
-  SilverStripe\Forms\GridField\GridFieldViewButton:
-    VIEW: View
   SilverStripe\ORM\DataObject:
+    FILTER_WITHINRANGE_FROM: מ־
+    FILTER_WITHINRANGE_TO: עד
     PLURALNAME: 'אובייקטי מידע'
     SINGULARNAME: 'אובייקט מידע'
   SilverStripe\ORM\FieldType\DBBoolean:

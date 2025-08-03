@@ -55,9 +55,9 @@ use SilverStripe\ORM\Hierarchy\MarkedSet;
  * @see CheckboxSetField for multiple selections through checkboxes.
  * @see OptionsetField for single selections via radiobuttons.
  */
-class TreeDropdownField extends FormField
+class TreeDropdownField extends FormField implements HasOneRelationFieldInterface
 {
-    protected $schemaDataType = self::SCHEMA_DATA_TYPE_SINGLESELECT;
+    protected $schemaDataType = TreeDropdownField::SCHEMA_DATA_TYPE_SINGLESELECT;
 
     protected $schemaComponent = 'TreeDropdownField';
 
@@ -458,7 +458,6 @@ class TreeDropdownField extends FormField
             $this->populateIDs();
         }
 
-        /** @var DataObject|Hierarchy $obj */
         $obj = null;
         $sourceObject = $this->getSourceObject();
 
@@ -562,7 +561,7 @@ class TreeDropdownField extends FormField
         } else {
             // Return basic html
             $html = $markingSet->renderChildren(
-                [self::class . '_HTML', 'type' => 'Includes'],
+                [TreeDropdownField::class . '_HTML', 'type' => 'Includes'],
                 $customised
             );
             return HTTPResponse::create()
@@ -837,7 +836,6 @@ class TreeDropdownField extends FormField
      */
     public function performReadonlyTransformation()
     {
-        /** @var TreeDropdownField_Readonly $copy */
         $copy = $this->castedCopy(TreeDropdownField_Readonly::class);
         $copy->setKeyField($this->getKeyField());
         $copy->setLabelField($this->getLabelField());
@@ -846,10 +844,6 @@ class TreeDropdownField extends FormField
         return $copy;
     }
 
-    /**
-     * @param string|FormField $classOrCopy
-     * @return FormField
-     */
     public function castedCopy($classOrCopy)
     {
         $field = $classOrCopy;
@@ -900,10 +894,10 @@ class TreeDropdownField extends FormField
     protected function getCacheKey()
     {
         $target = $this->getSourceObject();
-        if (!isset(self::$cacheKeyCache[$target])) {
-            self::$cacheKeyCache[$target] = DataList::create($target)->max('LastEdited');
+        if (!isset(TreeDropdownField::$cacheKeyCache[$target])) {
+            TreeDropdownField::$cacheKeyCache[$target] = DataList::create($target)->max('LastEdited');
         }
-        return self::$cacheKeyCache[$target];
+        return TreeDropdownField::$cacheKeyCache[$target];
     }
 
     public function getSchemaDataDefaults()
@@ -923,7 +917,7 @@ class TreeDropdownField extends FormField
 
     /**
      * @param boolean $bool
-     * @return self Self reference
+     * @return TreeDropdownField Self reference
      */
     public function setHasEmptyDefault($bool)
     {

@@ -37,12 +37,15 @@ ro:
     Save: Salvează
   SilverStripe\Forms\GridField\GridFieldEditButton:
     EDIT: Editare
+  SilverStripe\Forms\GridField\GridFieldFilterHeader:
+    Search_Default: Căutare
   SilverStripe\Forms\GridField\GridFieldPaginator:
     Page: Pagină
-    View: View
-  SilverStripe\Forms\GridField\GridFieldViewButton:
-    VIEW: View
+  SilverStripe\Forms\UrlField:
+    INVALID: 'Vă rugăm să introduceți un URL valid'
   SilverStripe\ORM\DataObject:
+    FILTER_WITHINRANGE_FROM: 'De la'
+    FILTER_WITHINRANGE_TO: La
     PLURALNAME: 'Obiecte Data'
     SINGULARNAME: 'Obiect Data'
   SilverStripe\ORM\FieldType\DBBoolean:

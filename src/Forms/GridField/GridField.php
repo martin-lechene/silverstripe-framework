@@ -20,11 +20,17 @@ use SilverStripe\Forms\GridField\FormAction\SessionStore;
 use SilverStripe\Forms\GridField\FormAction\StateStore;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataList;
-use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DataObjectInterface;
 use SilverStripe\ORM\FieldType\DBField;
+use SilverStripe\ORM\Filterable;
+use SilverStripe\ORM\Limitable;
+use SilverStripe\ORM\Sortable;
 use SilverStripe\ORM\SS_List;
 use SilverStripe\View\HTML;
+use SilverStripe\View\ViewableData;
+use SilverStripe\Security\SudoMode\SudoModeServiceInterface;
+use SilverStripe\ORM\DataObject;
+use SilverStripe\Forms\GridField\GridFieldViewButton;
 
 /**
  * Displays a {@link SS_List} in a grid format.
@@ -75,6 +81,7 @@ class GridField extends FormField
         GridFieldPaginator::class,
         GridFieldFilterHeader::class,
         GridFieldSortableHeader::class,
+        GridFieldSudoMode::class,
         GridFieldToolbarHeader::class,
         GridFieldViewButton::class,
         GridState_Component::class,
@@ -83,12 +90,12 @@ class GridField extends FormField
     /**
      * Data source.
      *
-     * @var SS_List
+     * @var SS_List&Filterable&Sortable&Limitable
      */
     protected $list = null;
 
     /**
-     * Class name of the DataObject that the GridField will display.
+     * Class name of the records that the GridField will display.
      *
      * Defaults to the value of $this->list->dataClass.
      *
@@ -205,7 +212,7 @@ class GridField extends FormField
     }
 
     /**
-     * Returns a data class that is a DataObject type that this GridField should look like.
+     * Returns the class name of the record type that this GridField should contain.
      *
      * @return string
      *
@@ -273,9 +280,18 @@ class GridField extends FormField
             }
         }
 
-        // If the edit button has been removed, replace it with a view button
+        // If the edit button has been removed, replace it with a view button if one is allowed
         if ($hadEditButton && !$copyConfig->getComponentByType(GridFieldViewButton::class)) {
-            $copyConfig->addComponent(GridFieldViewButton::create());
+            $viewButtonClass = null;
+            foreach ($allowedComponents as $componentClass) {
+                if (is_a($componentClass, GridFieldViewButton::class, true)) {
+                    $viewButtonClass = $componentClass;
+                    break;
+                }
+            }
+            if ($viewButtonClass) {
+                $copyConfig->addComponent($viewButtonClass::create());
+            }
         }
 
         $copy->extend('afterPerformReadonlyTransformation', $this);
@@ -332,7 +348,7 @@ class GridField extends FormField
     }
 
     /**
-     * @return ArrayList
+     * @return ArrayList<GridFieldComponent>
      */
     public function getComponents()
     {
@@ -374,7 +390,7 @@ class GridField extends FormField
     /**
      * Set the data source.
      *
-     * @param SS_List $list
+     * @param SS_List&Filterable&Sortable&Limitable $list
      *
      * @return $this
      */
@@ -388,7 +404,7 @@ class GridField extends FormField
     /**
      * Get the data source.
      *
-     * @return SS_List
+     * @return SS_List&Filterable&Sortable&Limitable
      */
     public function getList()
     {
@@ -398,7 +414,7 @@ class GridField extends FormField
     /**
      * Get the data source after applying every {@link GridField_DataManipulator} to it.
      *
-     * @return SS_List
+     * @return SS_List&Filterable&Sortable&Limitable
      */
     public function getManipulatedList()
     {
@@ -461,7 +477,7 @@ class GridField extends FormField
         if (($request instanceof NullHTTPRequest) && Controller::has_curr()) {
             $request = Controller::curr()->getRequest();
         }
-        
+
         $stateStr = $this->getStateManager()->getStateFromRequest($this, $request);
         if ($stateStr) {
             $oldState = $this->getState(false);
@@ -509,9 +525,41 @@ class GridField extends FormField
     {
         $this->extend('onBeforeRenderHolder', $this, $properties);
 
+        // Set GridField to read-only if sudo mode is required for the DataObject being managed
+        // and sudo mode is not active
+        $sudoModeTransformation = false;
+        $modelClass = null;
+        try {
+            $modelClass = $this->getModelClass();
+        } catch (LogicException) {
+            // noop - it's possible to have a gridfield with custom components that don't rely on columns
+            // from the records in the list.
+        }
+        $this->setReadonly(false);
+        if (is_a($modelClass, DataObject::class, true)) {
+            /** @var DataObject $obj */
+            $obj = Injector::inst()->create($modelClass);
+            if ($obj->getRequireSudoMode()) {
+                $session = Controller::curr()?->getRequest()?->getSession();
+                if ($session) {
+                    $service = Injector::inst()->get(SudoModeServiceInterface::class);
+                    if (!$service->check($session)) {
+                        $this->performReadonlyTransformation();
+                        $this->setReadonly(true);
+                        $this->addSudoModeComponent();
+                        $sudoModeTransformation = true;
+                    }
+                } else {
+                    // explicity set to false to update state for AJAX requests that refresh the gridfield after activating sudo mode
+                    $this->setReadonly(false);
+                }
+            }
+        }
+
         $columns = $this->getColumns();
 
         $list = $this->getManipulatedList();
+        $total = null; // can be populated by GridFieldPaginator
 
         $content = [
             'before' => '',
@@ -536,6 +584,16 @@ class GridField extends FormField
                     }
                 }
             }
+            if ($item instanceof GridFieldPaginator) {
+                $total = $item->getTotalItems();
+            }
+            if ($sudoModeTransformation) {
+                // Modify the GridFieldViewButton on any GridFields so that it doesn't suffix the view URL with 'view'
+                // This allows us to gracefully reload a form in readonly mode when sudo mode is activated
+                if ($item instanceof GridFieldViewButton) {
+                    $item->setSuffixViewToUrl(false);
+                }
+            }
         }
 
         foreach ($content as $contentKey => $contentValue) {
@@ -555,11 +613,11 @@ class GridField extends FormField
 
         // Continue looping if any placeholders exist
         while (array_filter($content ?? [], function ($value) {
-            return preg_match(self::FRAGMENT_REGEX ?? '', $value ?? '');
+            return preg_match(GridField::FRAGMENT_REGEX ?? '', $value ?? '');
         })) {
             foreach ($content as $contentKey => $contentValue) {
                 // Skip if this specific content has no placeholders
-                if (!preg_match_all(self::FRAGMENT_REGEX ?? '', $contentValue ?? '', $matches)) {
+                if (!preg_match_all(GridField::FRAGMENT_REGEX ?? '', $contentValue ?? '', $matches)) {
                     continue;
                 }
                 foreach ($matches[1] as $match) {
@@ -575,7 +633,7 @@ class GridField extends FormField
                     // If the fragment still has a fragment definition in it, when we should defer
                     // this item until later.
 
-                    if (preg_match(self::FRAGMENT_REGEX ?? '', $fragment ?? '', $matches)) {
+                    if (preg_match(GridField::FRAGMENT_REGEX ?? '', $fragment ?? '', $matches)) {
                         if (isset($fragmentDeferred[$contentKey]) && $fragmentDeferred[$contentKey] > 5) {
                             throw new LogicException(sprintf(
                                 'GridField HTML fragment "%s" and "%s" appear to have a circular dependency.',
@@ -618,7 +676,9 @@ class GridField extends FormField
             }
         }
 
-        $total = count($list ?? []);
+        if ($total === null) {
+            $total = count($list ?? []);
+        }
 
         if ($total > 0) {
             $rows = [];
@@ -744,7 +804,7 @@ class GridField extends FormField
     /**
      * @param int $total
      * @param int $index
-     * @param DataObject $record
+     * @param ViewableData $record
      * @param array $attributes
      * @param string $content
      *
@@ -762,7 +822,7 @@ class GridField extends FormField
     /**
      * @param int $total
      * @param int $index
-     * @param DataObject $record
+     * @param ViewableData $record
      * @param array $attributes
      * @param string $content
      *
@@ -780,7 +840,7 @@ class GridField extends FormField
     /**
      * @param int $total
      * @param int $index
-     * @param DataObject $record
+     * @param ViewableData $record
      *
      * @return array
      */
@@ -798,7 +858,7 @@ class GridField extends FormField
     /**
      * @param int $total
      * @param int $index
-     * @param DataObject $record
+     * @param ViewableData $record
      *
      * @return array
      */
@@ -869,7 +929,7 @@ class GridField extends FormField
     /**
      * Get the value from a column.
      *
-     * @param DataObject $record
+     * @param ViewableData $record
      * @param string $column
      *
      * @return string
@@ -922,7 +982,7 @@ class GridField extends FormField
      * Use of this method ensures that any special rules around the data for this gridfield are
      * followed.
      *
-     * @param DataObject $record
+     * @param ViewableData $record
      * @param string $fieldName
      *
      * @return mixed
@@ -949,7 +1009,7 @@ class GridField extends FormField
     /**
      * Get extra columns attributes used as HTML attributes.
      *
-     * @param DataObject $record
+     * @param ViewableData $record
      * @param string $column
      *
      * @return array
@@ -1341,5 +1401,28 @@ class GridField extends FormField
         }
 
         return '';
+    }
+
+    /**
+     * Add a GridFieldSudoMode component to this GridField.
+     */
+    private function addSudoModeComponent(): void
+    {
+        $newComponent = GridFieldSudoMode::create($this->Title(), $this->getColumnCount());
+        $components = $this->getComponents()->toArray();
+        $classes = array_map(fn($component) => get_class($component), $components);
+        $index = array_search(GridFieldToolbarHeader::class, $classes);
+        // Insert the as new either after the GridFieldToolbarHeader or as the first component
+        // This is done so that the component is rendered in the correct order
+        // This is not ideal as we should not have to rely on the order of components
+        // so do not assume that this is best practice
+        if ($index !== false) {
+            array_splice($components, $index + 1, 0, [$newComponent]);
+        } else {
+            array_unshift($components, $newComponent);
+        }
+        $newConfig = GridFieldConfig::create();
+        $newConfig->addComponents($components);
+        $this->setConfig($newConfig);
     }
 }

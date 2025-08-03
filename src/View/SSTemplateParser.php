@@ -12,6 +12,7 @@ namespace SilverStripe\View;
 use SilverStripe\Core\Injector\Injector;
 use Parser;
 use InvalidArgumentException;
+use SilverStripe\Dev\Deprecation;
 
 // We want this to work when run by hand too
 if (defined('THIRDPARTY_PATH')) {
@@ -51,6 +52,8 @@ if (defined('THIRDPARTY_PATH')) {
   *
   * Angle Bracket: angle brackets "<" and ">" are used to eat whitespace between template elements
   * N: eats white space including newlines (using in legacy _t support)
+  *
+  * @deprecated 5.4.0 Will be renamed to SilverStripe\TemplateEngine\SSTemplateParser
   */
 class SSTemplateParser extends Parser implements TemplateParser
 {
@@ -98,6 +101,11 @@ class SSTemplateParser extends Parser implements TemplateParser
      */
     function construct($matchrule, $name, $arguments = null)
     {
+        Deprecation::noticeWithNoReplacment(
+            '5.4.0',
+            'Will be renamed to SilverStripe\TemplateEngine\SSTemplateParser in a future major release',
+            Deprecation::SCOPE_CLASS
+        );
         $res = parent::construct($matchrule, $name, $arguments);
         if (!isset($res['php'])) {
             $res['php'] = '';
@@ -1886,6 +1894,8 @@ class SSTemplateParser extends Parser implements TemplateParser
             $res['php'] .= '((bool)'.$sub['php'].')';
         } else {
             $php = ($sub['ArgumentMode'] == 'default' ? $sub['lookup_php'] : $sub['php']);
+            // TODO: kinda hacky - maybe we need a way to pass state down the parse chain so
+            // Lookup_LastLookupStep and Argument_BareWord can produce hasValue instead of XML_val
             $res['php'] .= str_replace('$$FINAL', 'hasValue', $php ?? '');
         }
     }
@@ -3738,7 +3748,9 @@ class SSTemplateParser extends Parser implements TemplateParser
 
     function OldI18NTag_STR(&$res, $sub)
     {
-        $res['php'] = '$val .= ' . $sub['php'] . ';';
+        $res['php'] = '$val .= ' . $sub['php'] . ';' . Deprecation::class
+            . '::notice(\'5.4.0\', \'The <% _t() %> template syntax is deprecated. Use <%t %> instead.\', '
+            . Deprecation::class . '::SCOPE_GLOBAL);';
     }
 
     /* NamedArgument: Name:Word "=" Value:Argument */
@@ -3895,7 +3907,7 @@ class SSTemplateParser extends Parser implements TemplateParser
         $arguments = $res['arguments'];
 
         // Note: 'type' here is important to disable subTemplates in SSViewer::getSubtemplateFor()
-        $res['php'] = '$val .= \\SilverStripe\\View\\SSViewer::execute_template([["type" => "Includes", '.$template.'], '.$template.'], $scope->getItem(), [' .
+        $res['php'] = '$val .= \\SilverStripe\\View\\SSViewer::execute_template([["type" => "Includes", '.$template.'], '.$template.'], $scope->getCurrentItem(), [' .
             implode(',', $arguments)."], \$scope, true);\n";
 
         if ($this->includeDebuggingComments) { // Add include filename comments on dev sites
@@ -4257,13 +4269,13 @@ class SSTemplateParser extends Parser implements TemplateParser
     function ClosedBlock_Handle_Loop(&$res)
     {
         if ($res['ArgumentCount'] > 1) {
-            throw new SSTemplateParseException('Either no or too many arguments in control block. Must be one ' .
-                'argument only.', $this);
+            throw new SSTemplateParseException('Too many arguments in control block. Must be one or no' .
+                'arguments only.', $this);
         }
 
         //loop without arguments loops on the current scope
         if ($res['ArgumentCount'] == 0) {
-            $on = '$scope->obj(\'Up\', null)->obj(\'Foo\', null)';
+            $on = '$scope->locally()->obj(\'Me\', null, true)';
         } else {    //loop in the normal way
             $arg = $res['Arguments'][0];
             if ($arg['ArgumentMode'] == 'string') {
@@ -4428,7 +4440,9 @@ class SSTemplateParser extends Parser implements TemplateParser
         if ($res['ArgumentCount'] != 0) {
             throw new SSTemplateParseException('Base_tag takes no arguments', $this);
         }
-        return '$val .= \\SilverStripe\\View\\SSViewer::get_base_tag($val);';
+        $code = '$isXhtml = preg_match(\'/<!DOCTYPE[^>]+xhtml/i\', $val);';
+        $code .= PHP_EOL . '$val .= \\SilverStripe\\View\\SSViewer::getBaseTag($isXhtml);';
+        return $code;
     }
 
     /**
@@ -5290,6 +5304,8 @@ class SSTemplateParser extends Parser implements TemplateParser
         $text = stripslashes($text ?? '');
         $text = addcslashes($text ?? '', '\'\\');
 
+        // TODO: This is pretty ugly & gets applied on all files not just html. I wonder if we can make this
+        // non-dynamically calculated
         $code = <<<'EOC'
 (\SilverStripe\View\SSViewer::getRewriteHashLinksDefault()
     ? \SilverStripe\Core\Convert::raw2att( preg_replace("/^(\\/)+/", "/", $_SERVER['REQUEST_URI'] ) )
@@ -5328,7 +5344,8 @@ EOC;
 
             $this->includeDebuggingComments = $includeDebuggingComments;
 
-            // Ignore UTF8 BOM at beginning of string.
+            // Ignore UTF8 BOM at beginning of string. TODO: Confirm this is needed, make sure SSViewer handles UTF
+            // (and other encodings) properly
             if (substr($string ?? '', 0, 3) == pack("CCC", 0xef, 0xbb, 0xbf)) {
                 $this->pos = 3;
             }

@@ -4,6 +4,7 @@ namespace SilverStripe\View;
 
 use InvalidArgumentException;
 use SilverStripe\Core\ClassInfo;
+use SilverStripe\Dev\Deprecation;
 use SilverStripe\ORM\FieldType\DBField;
 
 /**
@@ -11,7 +12,7 @@ use SilverStripe\ORM\FieldType\DBField;
  * data that is scope-independant (like BaseURL), or type-specific data that is layered on top cross-cut like
  * (like $FirstLast etc).
  *
- * It's separate from SSViewer_Scope to keep that fairly complex code as clean as possible.
+ * @deprecated 5.4.0 Will be merged into SilverStripe\TemplateEngine\ScopeManager
  */
 class SSViewer_DataPresenter extends SSViewer_Scope
 {
@@ -65,6 +66,7 @@ class SSViewer_DataPresenter extends SSViewer_Scope
         array $underlay = null,
         SSViewer_Scope $inheritedScope = null
     ) {
+        Deprecation::noticeWithNoReplacment('5.4.0', 'Will be merged into ' . SSViewer_Scope::class, Deprecation::SCOPE_CLASS);
         parent::__construct($item, $inheritedScope);
 
         $this->overlay = $overlay ?: [];
@@ -79,11 +81,11 @@ class SSViewer_DataPresenter extends SSViewer_Scope
      */
     protected function cacheGlobalProperties()
     {
-        if (self::$globalProperties !== null) {
+        if (SSViewer_DataPresenter::$globalProperties !== null) {
             return;
         }
 
-        self::$globalProperties = $this->getPropertiesFromProvider(
+        SSViewer_DataPresenter::$globalProperties = $this->getPropertiesFromProvider(
             TemplateGlobalProvider::class,
             'get_template_global_variables'
         );
@@ -94,11 +96,11 @@ class SSViewer_DataPresenter extends SSViewer_Scope
      */
     protected function cacheIteratorProperties()
     {
-        if (self::$iteratorProperties !== null) {
+        if (SSViewer_DataPresenter::$iteratorProperties !== null) {
             return;
         }
 
-        self::$iteratorProperties = $this->getPropertiesFromProvider(
+        SSViewer_DataPresenter::$iteratorProperties = $this->getPropertiesFromProvider(
             TemplateIteratorProvider::class,
             'get_template_iterator_variables',
             true // Call non-statically
@@ -376,7 +378,7 @@ class SSViewer_DataPresenter extends SSViewer_Scope
 
         // Check if the method to-be-called exists on the target object - if so, don't check any further
         // injection locations
-        $on = $this->itemIterator ? $this->itemIterator->current() : $this->item;
+        $on = $this->getItem();
         if (is_object($on) && (isset($on->$property) || method_exists($on, $property ?? ''))) {
             return [];
         }
@@ -388,8 +390,8 @@ class SSViewer_DataPresenter extends SSViewer_Scope
         }
 
         // Then for iterator-specific overrides
-        if (array_key_exists($property, self::$iteratorProperties)) {
-            $source = self::$iteratorProperties[$property];
+        if (array_key_exists($property, SSViewer_DataPresenter::$iteratorProperties)) {
+            $source = SSViewer_DataPresenter::$iteratorProperties[$property];
             /** @var TemplateIteratorProvider $implementor */
             $implementor = $source['implementor'];
             if ($this->itemIterator) {
@@ -408,9 +410,9 @@ class SSViewer_DataPresenter extends SSViewer_Scope
         }
 
         // And finally for global overrides
-        if (array_key_exists($property, self::$globalProperties)) {
+        if (array_key_exists($property, SSViewer_DataPresenter::$globalProperties)) {
             return [
-                'source' => self::$globalProperties[$property] // get the method call
+                'source' => SSViewer_DataPresenter::$globalProperties[$property] // get the method call
             ];
         }
 

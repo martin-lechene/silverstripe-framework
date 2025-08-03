@@ -8,13 +8,14 @@ use SilverStripe\Control\Controller;
 use SilverStripe\Control\RequestHandler;
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\Core\Convert;
-use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DataObjectInterface;
 use SilverStripe\ORM\FieldType\DBField;
 use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\ORM\ValidationResult;
 use SilverStripe\View\AttributesHTML;
 use SilverStripe\View\SSViewer;
+use SilverStripe\View\ViewableData;
+use SilverStripe\Dev\Deprecation;
 
 /**
  * Represents a field in a form.
@@ -238,7 +239,7 @@ class FormField extends RequestHandler
      *     or simply be a block of stand-alone content. As with 'Custom',
      *     the component property is mandatory if this is assigned.
      *
-     * Each value has an equivalent constant, e.g. {@link self::SCHEMA_DATA_TYPE_STRING}.
+     * Each value has an equivalent constant, e.g. {@link FormField::SCHEMA_DATA_TYPE_STRING}.
      *
      * @var string
      */
@@ -333,7 +334,7 @@ class FormField extends RequestHandler
         $this->setName($name);
 
         if ($title === null) {
-            $this->title = self::name_to_label($name);
+            $this->title = FormField::name_to_label($name);
         } else {
             $this->title = $title;
         }
@@ -447,18 +448,20 @@ class FormField extends RequestHandler
      *
      * @see FormField::setSubmittedValue()
      * @return mixed
+     * @deprecated 5.4.0 Will be replaced by getFormattedValue() and getValue() in a future major release
      */
     public function Value()
     {
+        Deprecation::notice('5.4.0', 'Will be replaced by getFormattedValue() and getValue() in a future major release');
         return $this->value;
     }
 
     /**
-     * Method to save this form field into the given {@link DataObject}.
+     * Method to save this form field into the given record.
      *
      * By default, makes use of $this->dataValue()
      *
-     * @param DataObject|DataObjectInterface $record DataObject to save data into
+     * @param ViewableData|DataObjectInterface $record Record to save data into
      */
     public function saveInto(DataObjectInterface $record)
     {
@@ -697,7 +700,7 @@ class FormField extends RequestHandler
      * or a submitted form value they should override setSubmittedValue() instead.
      *
      * @param mixed $value Either the parent object, or array of source data being loaded
-     * @param array|DataObject $data {@see Form::loadDataFrom}
+     * @param array|ViewableData $data {@see Form::loadDataFrom}
      * @return $this
      */
     public function setValue($value, $data = null)
@@ -712,7 +715,7 @@ class FormField extends RequestHandler
      * data formats.
      *
      * @param mixed $value
-     * @param array|DataObject $data
+     * @param array|ViewableData $data
      * @return $this
      */
     public function setSubmittedValue($value, $data = null)
@@ -1223,9 +1226,11 @@ class FormField extends RequestHandler
      * @param bool $result
      * @param Validator $validator
      * @return bool
+     * @deprecated 5.4.0 Use extend() directly instead
      */
     protected function extendValidationResult(bool $result, Validator $validator): bool
     {
+        Deprecation::notice('5.4.0', 'Use extend() directly instead');
         $this->extend('updateValidationResult', $result, $validator);
         return $result;
     }
@@ -1239,6 +1244,11 @@ class FormField extends RequestHandler
      */
     public function validate($validator)
     {
+        Deprecation::noticeWithNoReplacment(
+            '5.4.0',
+            'This method will take zero arguments and return a ValidationResult in a future major release'
+            . ' object instead of a boolean in CMS 6.0.0'
+        );
         return $this->extendValidationResult(true, $validator);
     }
 
@@ -1352,9 +1362,10 @@ class FormField extends RequestHandler
      *
      * Does not copy custom field templates, since they probably won't apply to the new instance.
      *
-     * @param mixed $classOrCopy Class name for copy, or existing copy instance to update
+     * @template T
+     * @param class-string<T>|T $classOrCopy Class name for copy, or existing copy instance to update
      *
-     * @return FormField
+     * @return T
      */
     public function castedCopy($classOrCopy)
     {
@@ -1397,7 +1408,7 @@ class FormField extends RequestHandler
      * Sets the component type the FormField will be rendered as on the front-end.
      *
      * @param string $componentType
-     * @return FormField
+     * @return static
      */
     public function setSchemaComponent($componentType)
     {
@@ -1422,7 +1433,7 @@ class FormField extends RequestHandler
      * If you want to pass around ad hoc data use the `data` array e.g. pass `['data' => ['myCustomKey' => 'yolo']]`.
      *
      * @param array $schemaData - The data to be merged with $this->schemaData.
-     * @return FormField
+     * @return static
      */
     public function setSchemaData($schemaData = [])
     {
@@ -1494,7 +1505,7 @@ class FormField extends RequestHandler
      * If you want to pass around ad hoc data use the `data` array e.g. pass `['data' => ['myCustomKey' => 'yolo']]`.
      *
      * @param array $schemaState The data to be merged with $this->schemaData.
-     * @return FormField
+     * @return static
      */
     public function setSchemaState($schemaState = [])
     {
@@ -1565,7 +1576,7 @@ class FormField extends RequestHandler
      * @param Tip|null $tip
      * @return $this
      */
-    public function setTitleTip(?Tip $tip): self
+    public function setTitleTip(?Tip $tip): FormField
     {
         $this->titleTip = $tip;
         return $this;

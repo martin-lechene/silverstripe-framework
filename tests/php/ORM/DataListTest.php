@@ -180,6 +180,22 @@ class DataListTest extends SapphireTest
         $teamsComments->subtract($teams);
     }
 
+    public function testSetDataQuery(): void
+    {
+        $list = Team::get();
+        $numTeams = $list->count();
+        $numTeamComments = TeamComment::get()->count();
+        $this->assertNotSame($numTeams, $numTeamComments, 'If these are the same, we need to update the test');
+
+        $newList = $list->setDataQuery(new DataQuery(TeamComment::class));
+        // Original list unaffected
+        $this->assertNotSame($list, $newList);
+        $this->assertSame(Team::class, $list->dataClass());
+        // New list is using the new data query
+        $this->assertSame(TeamComment::class, $newList->dataClass());
+        $this->assertSame($numTeamComments, $newList->count());
+    }
+
     public function testListCreationSortAndLimit()
     {
         // By default, a DataList will contain all items of that class
@@ -641,6 +657,124 @@ class DataListTest extends SapphireTest
         $list = $list->sort('Name', 'desc');
         $this->assertEquals('Phil', $list->first()->Name, 'Last comment should be from Phil');
         $this->assertEquals('Bob', $list->last()->Name, 'First comment should be from Bob');
+    }
+
+    public static function provideDefaultSort(): array
+    {
+        return [
+            // string sort
+            'string, single item' => [
+                'defaultSort' => 'Name',
+                'expected' => [
+                    'Bob',
+                    'Joe',
+                    'Phil',
+                ],
+            ],
+            'string, single item DESC' => [
+                'defaultSort' => 'Name DESC',
+                'expected' => [
+                    'Phil',
+                    'Joe',
+                    'Bob',
+                ],
+            ],
+            'string, two items' => [
+                'defaultSort' => 'Comment, Name ASC',
+                'expected' => [
+                    'Phil',
+                    'Bob',
+                    'Joe',
+                ],
+            ],
+            'string, two items DESC' => [
+                'defaultSort' => 'Comment, Name DESC',
+                'expected' => [
+                    'Phil',
+                    'Joe',
+                    'Bob',
+                ],
+            ],
+            // indexed array sort
+            'array, single item' => [
+                'defaultSort' => ['Name'],
+                'expected' => [
+                    'Bob',
+                    'Joe',
+                    'Phil',
+                ],
+            ],
+            'array, single item DESC' => [
+                'defaultSort' => ['Name DESC'],
+                'expected' => [
+                    'Phil',
+                    'Joe',
+                    'Bob',
+                ],
+            ],
+            'array, two items' => [
+                'defaultSort' => ['Comment', 'Name ASC'],
+                'expected' => [
+                    'Phil',
+                    'Bob',
+                    'Joe',
+                ],
+            ],
+            'array, two items DESC' => [
+                'defaultSort' => ['Comment', 'Name DESC'],
+                'expected' => [
+                    'Phil',
+                    'Joe',
+                    'Bob',
+                ],
+            ],
+            // associative array sort
+            'assoc array, single item' => [
+                'defaultSort' => ['Name' => 'ASC'],
+                'expected' => [
+                    'Bob',
+                    'Joe',
+                    'Phil',
+                ],
+            ],
+            'assoc array, single item DESC' => [
+                'defaultSort' => ['Name' => 'DESC'],
+                'expected' => [
+                    'Phil',
+                    'Joe',
+                    'Bob',
+                ],
+            ],
+            'assoc array, two items' => [
+                'defaultSort' => ['Comment', 'Name' => 'ASC'],
+                'expected' => [
+                    'Phil',
+                    'Bob',
+                    'Joe',
+                ],
+            ],
+            'assoc array, two items DESC' => [
+                'defaultSort' => ['Comment', 'Name' => 'DESC'],
+                'expected' => [
+                    'Phil',
+                    'Joe',
+                    'Bob',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideDefaultSort
+     */
+    public function testDefaultSort(string|array $defaultSort, array $expected): void
+    {
+        // Prepare fixtures - we need some comments to be identical for the "two items" scenarios
+        $this->objFromFixture(TeamComment::class, 'comment1')->setField('Comment', 'z comment')->write();
+        $this->objFromFixture(TeamComment::class, 'comment2')->setField('Comment', 'z comment')->write();
+
+        TeamComment::config()->set('default_sort', $defaultSort);
+        $this->assertSame($expected, TeamComment::get()->column('Name'));
     }
 
     public function testSortWithArraySyntaxSortASC()

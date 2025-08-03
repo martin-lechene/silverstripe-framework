@@ -1,7 +1,6 @@
 pt:
   SilverStripe\AssetAdmin\Forms\UploadField:
     Dimensions: Dimensões
-    EDIT: Edit
     EDITINFO: 'Editar este ficheiro'
   SilverStripe\Control\ChangePasswordEmail_ss:
     CHANGEPASSWORDTEXT1: 'Modificou a sua password para'
@@ -48,20 +47,19 @@ pt:
     Delete: Apagar
     DeletePermissionsFailure: 'Não tem permissões para apagar'
     Save: Guardar
-  SilverStripe\Forms\GridField\GridFieldEditButton:
-    EDIT: Edit
+  SilverStripe\Forms\GridField\GridFieldFilterHeader:
+    Search_Default: Procurar
   SilverStripe\Forms\GridField\GridFieldPaginator:
     OF: de
     Page: Página
-    View: View
-  SilverStripe\Forms\GridField\GridFieldViewButton:
-    VIEW: View
   SilverStripe\Forms\MoneyField:
     FIELDLABELAMOUNT: Quantidade
     FIELDLABELCURRENCY: Moeda
   SilverStripe\Forms\NullableField:
     IsNullLabel: 'é Vazio'
   SilverStripe\ORM\DataObject:
+    FILTER_WITHINRANGE_FROM: De
+    FILTER_WITHINRANGE_TO: Para
     PLURALNAME: 'Objectos de Dados'
     SINGULARNAME: 'Objecto de Dados'
   SilverStripe\ORM\FieldType\DBBoolean:

@@ -278,7 +278,6 @@ class MySQLDatabase extends Database implements TransactionManager
         $queryParameters = [];
         $totalCount = 0;
         foreach ($lists as $class => $list) {
-            /** @var SQLSelect $query */
             $query = $list->dataQuery()->query();
 
             // There's no need to do all that joining
@@ -567,9 +566,17 @@ class MySQLDatabase extends Database implements TransactionManager
      */
     public function clearTable($table)
     {
+        // Not simply using "TRUNCATE TABLE \"$table\"" because DELETE is a lot quicker
+        // than TRUNCATE which is very relevant during unit testing. Using TRUNCATE will lead to an
+        // approximately 50% increase it the total time of running unit tests.
         $this->query("DELETE FROM \"$table\"");
 
         // Check if resetting the auto-increment is needed
+
+        // First run ANALYZE TABLE to reset table stats which are cached for 24 hours by
+        // default in MySQL 8
+        $this->query("ANALYZE TABLE \"$table\"");
+
         $autoIncrement = $this->preparedQuery(
             'SELECT "AUTO_INCREMENT" FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?',
             [ $this->getSelectedDatabase(), $table]
@@ -578,5 +585,23 @@ class MySQLDatabase extends Database implements TransactionManager
         if ($autoIncrement > 1) {
             $this->query("ALTER TABLE \"$table\" AUTO_INCREMENT = 1");
         }
+    }
+
+    /**
+     * Generate SQL for sorting by a specific field using MySQL's FIELD function.
+     *
+     * @param string $field The name of the field to sort by.
+     * @param array $values The values to order by.
+     * @return string SQL snippet for ordering.
+     */
+    public function sortByField(string $field, array $values): string
+    {
+        $escapedValues = [];
+        foreach ($values as $value) {
+            $escaped = is_int($value) ? $value : "'" . addslashes($value) . "'";
+            $escapedValues[] = $escaped;
+        }
+        $sqlIds = implode(',', $escapedValues);
+        return "FIELD({$field}, {$sqlIds})";
     }
 }

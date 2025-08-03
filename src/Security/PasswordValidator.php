@@ -5,6 +5,7 @@ namespace SilverStripe\Security;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Extensible;
 use SilverStripe\Core\Injector\Injectable;
+use SilverStripe\Dev\Deprecation;
 use SilverStripe\ORM\ValidationResult;
 
 /**
@@ -13,12 +14,14 @@ use SilverStripe\ORM\ValidationResult;
  * <code>
  * $pwdVal = new PasswordValidator();
  * $pwdValidator->setMinLength(7);
- * $pwdValidator->checkHistoricalPasswords(6);
+ * $pwdValidator->setHistoricCount(6);
  * $pwdValidator->setMinTestScore(3);
  * $pwdValidator->setTestNames(array("lowercase", "uppercase", "digits", "punctuation"));
  *
  * Member::set_password_validator($pwdValidator);
  * </code>
+ *
+ * @deprecated 5.4.0 Will be renamed to SilverStripe\Security\Validation\RulesPasswordValidator
  */
 class PasswordValidator
 {
@@ -74,6 +77,15 @@ class PasswordValidator
      * @var int
      */
     protected $historicalPasswordCount = null;
+
+    public function __construct()
+    {
+        Deprecation::notice(
+            '5.4.0',
+            'Will be renamed to SilverStripe\Security\Validation\RulesPasswordValidator in a future major release',
+            Deprecation::SCOPE_CLASS
+        );
+    }
 
     /**
      * @return int
@@ -203,6 +215,7 @@ class PasswordValidator
                 if (preg_match($tests[$name] ?? '', $password ?? '')) {
                     continue;
                 }
+                /** @phpstan-ignore translation.key (we need the key to be dynamic here) */
                 $missedTests[] = _t(
                     __CLASS__ . '.STRENGTHTEST' . strtoupper($name ?? ''),
                     $name,
@@ -227,7 +240,6 @@ class PasswordValidator
                 ->where(['"MemberPassword"."MemberID"' => $member->ID])
                 ->sort('"Created" DESC, "ID" DESC')
                 ->limit($historicCount);
-            /** @var MemberPassword $previousPassword */
             foreach ($previousPasswords as $previousPassword) {
                 if ($previousPassword->checkPassword($password)) {
                     $error = _t(

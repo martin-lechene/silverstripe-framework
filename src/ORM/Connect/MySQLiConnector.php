@@ -2,10 +2,12 @@
 
 namespace SilverStripe\ORM\Connect;
 
+use Exception;
 use mysqli;
 use mysqli_sql_exception;
 use mysqli_stmt;
 use SilverStripe\Core\Config\Config;
+use SilverStripe\Core\Environment;
 
 /**
  * Connector for MySQL using the MySQLi method
@@ -64,12 +66,18 @@ class MySQLiConnector extends DBConnector
         // Record last statement for error reporting
         $statement = $this->dbConn->stmt_init();
         $this->setLastStatement($statement);
+
         try {
             $success = $statement->prepare($sql);
         } catch (mysqli_sql_exception $e) {
             $success = false;
-            $this->databaseError($e->getMessage(), E_USER_ERROR, $sql);
+            $this->throwRelevantError($e->getMessage(), $e->getCode(), E_USER_ERROR, $sql, []);
         }
+
+        if (!$success || $statement->error) {
+            $this->throwRelevantError($this->getLastError(), $this->getLastErrorCode(), E_USER_ERROR, $sql, []);
+        }
+
         return $statement;
     }
 
@@ -81,15 +89,21 @@ class MySQLiConnector extends DBConnector
         // Connection charset and collation
         $connCharset = Config::inst()->get(MySQLDatabase::class, 'connection_charset');
         $connCollation = Config::inst()->get(MySQLDatabase::class, 'connection_collation');
+        $socket = Environment::getEnv('SS_DATABASE_SOCKET');
+        $flags = Environment::getEnv('SS_DATABASE_FLAGS');
+
+        $flags = $flags ? array_reduce(explode(',', $flags), function ($carry, $item) {
+            $item = trim($item);
+            return $carry | constant($item);
+        }, 0) : $flags;
 
         $this->dbConn = mysqli_init();
 
         // Use native types (MysqlND only)
         if (defined('MYSQLI_OPT_INT_AND_FLOAT_NATIVE')) {
             $this->dbConn->options(MYSQLI_OPT_INT_AND_FLOAT_NATIVE, true);
-
-        // The alternative is not ideal, throw a notice-level error
         } else {
+            // The alternative is not ideal, throw a notice-level error
             user_error(
                 'mysqlnd PHP library is not available, numeric values will be fetched from the DB as strings',
                 E_USER_NOTICE
@@ -108,7 +122,7 @@ class MySQLiConnector extends DBConnector
                 dirname($parameters['ssl_ca'] ?? ''),
                 array_key_exists('ssl_cipher', $parameters ?? [])
                     ? $parameters['ssl_cipher']
-                    : self::config()->get('ssl_cipher_default')
+                    : static::config()->get('ssl_cipher_default')
             );
         }
 
@@ -117,7 +131,9 @@ class MySQLiConnector extends DBConnector
             $parameters['username'],
             $parameters['password'],
             $selectedDB,
-            !empty($parameters['port']) ? $parameters['port'] : ini_get("mysqli.default_port")
+            !empty($parameters['port']) ? $parameters['port'] : ini_get("mysqli.default_port"),
+            $socket ?? null,
+            $flags ?? 0
         );
 
         if ($this->dbConn->connect_error) {
@@ -126,8 +142,8 @@ class MySQLiConnector extends DBConnector
 
         // Set charset and collation if given and not null. Can explicitly set to empty string to omit
         $charset = isset($parameters['charset'])
-                ? $parameters['charset']
-                : $connCharset;
+            ? $parameters['charset']
+            : $connCharset;
 
         if (!empty($charset)) {
             $this->dbConn->set_charset($charset);
@@ -181,17 +197,19 @@ class MySQLiConnector extends DBConnector
     {
         $this->beforeQuery($sql);
 
-        $error = null;
+        $exception = null;
         $handle = null;
 
         try {
             // Benchmark query
             $handle = $this->dbConn->query($sql ?? '', MYSQLI_STORE_RESULT);
         } catch (mysqli_sql_exception $e) {
-            $error = $e->getMessage();
+            $exception = $e;
         } finally {
             if (!$handle || $this->dbConn->error) {
-                $this->databaseError($error ?? $this->getLastError(), $errorLevel, $sql);
+                $errorMsg = $exception ? $exception->getMessage() : $this->getLastError();
+                $errorCode = $exception ? $exception->getCode() : $this->getLastErrorCode();
+                $this->throwRelevantError($errorMsg, $errorCode, $errorLevel, $sql, []);
                 return null;
             }
         }
@@ -306,12 +324,17 @@ class MySQLiConnector extends DBConnector
             }
 
             // Safely execute the statement
-            $statement->execute();
+            try {
+                $statement->execute();
+            } catch (mysqli_sql_exception $e) {
+                $success = false;
+                $this->throwRelevantError($e->getMessage(), $e->getCode(), $errorLevel, $sql, $parameters);
+            }
         }
 
         if (!$success || $statement->error) {
             $values = $this->parameterValues($parameters);
-            $this->databaseError($this->getLastError(), $errorLevel, $sql, $values);
+            $this->throwRelevantError($this->getLastError(), $this->getLastErrorCode(), $errorLevel, $sql, $values);
             return null;
         }
 
@@ -367,5 +390,39 @@ class MySQLiConnector extends DBConnector
             return $this->lastStatement->error;
         }
         return $this->dbConn->error;
+    }
+
+    public function getLastErrorCode(): int
+    {
+        // Check if a statement was used for the most recent query
+        if ($this->lastStatement && $this->lastStatement->errno) {
+            return $this->lastStatement->errno;
+        }
+        return $this->dbConn->errno;
+    }
+
+    /**
+     * Throw the correct DatabaseException for this error
+     *
+     * @throws DatabaseException
+     */
+    private function throwRelevantError(string $message, int $code, int $errorLevel, ?string $sql, array $parameters): void
+    {
+        if ($errorLevel === E_USER_ERROR && ($code === 1062 || $code === 1586)) {
+            // error 1062 is for a duplicate entry
+            // see https://dev.mysql.com/doc/mysql-errors/8.4/en/server-error-reference.html#error_er_dup_entry
+            // error 1586 is ALSO for a duplicate entry and uses the same error message
+            // see https://dev.mysql.com/doc/mysql-errors/8.4/en/server-error-reference.html#error_er_dup_entry_with_key_name
+            preg_match('/Duplicate entry \'(?P<val>[^\']+)\' for key \'?(?P<key>[^\']+)\'?/', $message, $matches);
+            // MySQL includes the table name in the key, but MariaDB doesn't.
+            $key = $matches['key'];
+            if (str_contains($key ?? '', '.')) {
+                $parts = explode('.', $key);
+                $key = array_pop($parts);
+            }
+            $this->duplicateEntryError($message, $key, $matches['val'], $sql, $parameters);
+        } else {
+            $this->databaseError($message, $errorLevel, $sql, $parameters);
+        }
     }
 }

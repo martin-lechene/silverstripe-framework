@@ -4,7 +4,6 @@ namespace SilverStripe\Core\Tests;
 
 use DateTime;
 use Exception;
-use ReflectionException;
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\Core\Tests\ClassInfoTest\BaseClass;
 use SilverStripe\Core\Tests\ClassInfoTest\BaseDataClass;
@@ -284,6 +283,14 @@ class ClassInfoTest extends SapphireTest
             $output,
             ClassInfo::hasMethod($object, $method)
         );
+    }
+
+    public function testHasTable()
+    {
+        $this->assertFalse(ClassInfo::hasTable(null));
+        $this->assertFalse(ClassInfo::hasTable(''));
+        $this->assertFalse(ClassInfo::hasTable('UnknownTableName'));
+        $this->assertTrue(ClassInfo::hasTable('Member'));
     }
 
     public function provideHasMethodCases()

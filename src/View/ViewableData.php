@@ -18,6 +18,7 @@ use SilverStripe\Core\Extensible;
 use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\Debug;
+use SilverStripe\Dev\Deprecation;
 use SilverStripe\ORM\ArrayLib;
 use SilverStripe\ORM\FieldType\DBField;
 use SilverStripe\ORM\FieldType\DBHTMLText;
@@ -31,6 +32,8 @@ use UnexpectedValueException;
  * A view interrogates the object being currently rendered in order to get data to render into the template. This data
  * is provided and automatically escaped by ViewableData. Any class that needs to be available to a view (controllers,
  * {@link DataObject}s, page controls) should inherit from this class.
+ *
+ * @deprecated 5.4.0 Will be renamed to SilverStripe\Model\ModelData
  */
 class ViewableData implements IteratorAggregate
 {
@@ -75,6 +78,13 @@ class ViewableData implements IteratorAggregate
      */
     private array $dynamicData = [];
 
+    /**
+     * Config of whether the model requires sudo mode to be active in order to be modified in admin
+     * Sudo mode is a security feature that requires the user to re-enter their password before
+     * making changes to the database.
+     */
+    private static bool $require_sudo_mode = false;
+
     // -----------------------------------------------------------------------------------------------------------------
 
     /**
@@ -96,6 +106,9 @@ class ViewableData implements IteratorAggregate
 
     public function __construct()
     {
+        Deprecation::withSuppressedNotice(function () {
+            Deprecation::notice('5.4.0', 'Will be renamed to SilverStripe\Model\ModelData', Deprecation::SCOPE_CLASS);
+        });
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -256,6 +269,14 @@ class ViewableData implements IteratorAggregate
     }
 
     /**
+     * Whether the model requires sudo mode to be active in order to be modified in admin
+     */
+    public function getRequireSudoMode(): bool
+    {
+        return static::config()->get('require_sudo_mode');
+    }
+
+    /**
      * Returns true if a method exists for the current class which isn't private.
      * Also returns true for private methods if $this is ViewableData (not a subclass)
      */
@@ -266,7 +287,7 @@ class ViewableData implements IteratorAggregate
             return $this->hasCustomMethod($method);
         }
         // All methods defined on ViewableData are accessible to ViewableData
-        if (static::class === self::class) {
+        if (static::class === ViewableData::class) {
             return true;
         }
         // Private methods defined on subclasses are not accessible to ViewableData
@@ -283,7 +304,7 @@ class ViewableData implements IteratorAggregate
         if (!property_exists($this, $property)) {
             return false;
         }
-        if (static::class === self::class) {
+        if (static::class === ViewableData::class) {
             return true;
         }
         $reflectionProperty = new ReflectionProperty($this, $property);
@@ -420,9 +441,11 @@ class ViewableData implements IteratorAggregate
      *
      * @param string $field
      * @return string
+     * @deprecated 5.4.0 Will be removed without equivalent functionality to replace it in a future major release.
      */
     public function castingClass($field)
     {
+        Deprecation::noticeWithNoReplacment('5.4.0', 'Will be removed without equivalent functionality to replace it in a future major release.');
         // Strip arguments
         $spec = $this->castingHelper($field);
         return trim(strtok($spec ?? '', '(') ?? '');
@@ -433,9 +456,11 @@ class ViewableData implements IteratorAggregate
      *
      * @param string $field
      * @return string 'xml'|'raw'
+     * @deprecated 5.4.0 Will be removed without equivalent functionality to replace it in a future major release.
      */
     public function escapeTypeForField($field)
     {
+        Deprecation::noticeWithNoReplacment('5.4.0', 'Will be removed without equivalent functionality to replace it in a future major release.');
         $class = $this->castingClass($field) ?: $this->config()->get('default_cast');
 
         /** @var DBField $type */
@@ -482,9 +507,11 @@ class ViewableData implements IteratorAggregate
      * @param string $fieldName Name of field
      * @param array $arguments List of optional arguments given
      * @return string
+     * @deprecated 5.4.0 Will be made private
      */
     protected function objCacheName($fieldName, $arguments)
     {
+        Deprecation::noticeWithNoReplacment('5.4.0', 'Will be made private');
         return $arguments
             ? $fieldName . ":" . var_export($arguments, true)
             : $fieldName;
@@ -540,6 +567,9 @@ class ViewableData implements IteratorAggregate
      */
     public function obj($fieldName, $arguments = [], $cache = false, $cacheName = null)
     {
+        if ($cacheName !== null) {
+            Deprecation::noticeWithNoReplacment('5.4.0', 'The $cacheName parameter has been deprecated and will be removed in a future major release');
+        }
         if (!$cacheName && $cache) {
             $cacheName = $this->objCacheName($fieldName, $arguments);
         }
@@ -582,9 +612,11 @@ class ViewableData implements IteratorAggregate
      * @param array $arguments
      * @param string $identifier an optional custom cache identifier
      * @return Object|DBField
+     * @deprecated 5.4.0 use obj() instead
      */
     public function cachedCall($fieldName, $arguments = [], $identifier = null)
     {
+        Deprecation::notice('5.4.0', 'Use obj() instead');
         return $this->obj($fieldName, $arguments, true, $identifier);
     }
 
@@ -611,9 +643,11 @@ class ViewableData implements IteratorAggregate
      * @param array $arguments
      * @param bool $cache
      * @return string
+     * @deprecated 5.4.0 Will be removed without equivalent functionality to replace it in a future major release
      */
     public function XML_val($field, $arguments = [], $cache = false)
     {
+        Deprecation::noticeWithNoReplacment('5.4.0');
         $result = $this->obj($field, $arguments, $cache);
         // Might contain additional formatting over ->XML(). E.g. parse shortcodes, nl2br()
         return $result->forTemplate();
@@ -624,9 +658,11 @@ class ViewableData implements IteratorAggregate
      *
      * @param array $fields an array of field names
      * @return array
+     * @deprecated 5.4.0 Will be removed without equivalent functionality to replace it in a future major release
      */
     public function getXMLValues($fields)
     {
+        Deprecation::noticeWithNoReplacment('5.4.0');
         $result = [];
 
         foreach ($fields as $field) {
@@ -644,10 +680,13 @@ class ViewableData implements IteratorAggregate
      * This is useful so you can use a single record inside a <% control %> block in a template - and then use
      * to access individual fields on this object.
      *
+     * @deprecated 5.2.0 Will be removed without equivalent functionality in a future major release
+     *
      * @return ArrayIterator
      */
     public function getIterator(): Traversable
     {
+        Deprecation::notice('5.2.0', 'Will be removed without equivalent functionality in a future major release');
         return new ArrayIterator([$this]);
     }
 
@@ -661,7 +700,7 @@ class ViewableData implements IteratorAggregate
      */
     public function getViewerTemplates($suffix = '')
     {
-        return SSViewer::get_templates_by_class(static::class, $suffix, self::class);
+        return SSViewer::get_templates_by_class(static::class, $suffix, ViewableData::class);
     }
 
     /**
@@ -685,7 +724,7 @@ class ViewableData implements IteratorAggregate
      * @return string
      * @uses ClassInfo
      */
-    public function CSSClasses($stopAtClass = self::class)
+    public function CSSClasses($stopAtClass = ViewableData::class)
     {
         $classes       = [];
         $classAncestry = array_reverse(ClassInfo::ancestry(static::class) ?? []);

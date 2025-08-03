@@ -3,9 +3,10 @@
 namespace SilverStripe\Logging\Tests;
 
 use Monolog\Handler\HandlerInterface;
+use ReflectionClass;
 use ReflectionMethod;
-use ReflectionProperty;
 use SilverStripe\Control\Director;
+use SilverStripe\Core\Environment;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\Deprecation;
 use SilverStripe\Dev\SapphireTest;
@@ -156,8 +157,7 @@ class HTTPOutputHandlerTest extends SapphireTest
     ) {
         $reflectionShouldShow = new ReflectionMethod(HTTPOutputHandler::class, 'shouldShowError');
         $reflectionShouldShow->setAccessible(true);
-        $reflectionTriggeringError = new ReflectionProperty(Deprecation::class, 'isTriggeringError');
-        $reflectionTriggeringError->setAccessible(true);
+        $reflectionDeprecation = new ReflectionClass(Deprecation::class);
 
         $cliShouldShowOrig = Deprecation::shouldShowForCli();
         $httpShouldShowOrig = Deprecation::shouldShowForHttp();
@@ -171,16 +171,22 @@ class HTTPOutputHandlerTest extends SapphireTest
             Deprecation::setShouldShowForCli(true);
             Deprecation::setShouldShowForHttp($shouldShow);
         }
-        $reflectionTriggeringError->setValue($triggeringError);
+        $reflectionDeprecation->setStaticPropertyValue('isTriggeringError', $triggeringError);
 
-        $mockHandler = $this->getMockBuilder(HTTPOutputHandler::class)->onlyMethods(['isCli'])->getMock();
-        $mockHandler->method('isCli')->willReturn($isCli);
+        $reflectionDirector = new ReflectionClass(Environment::class);
+        $origIsCli = $reflectionDirector->getStaticPropertyValue('isCliOverride');
+        $reflectionDirector->setStaticPropertyValue('isCliOverride', $isCli);
 
-        $result = $reflectionShouldShow->invoke($mockHandler, $errorCode);
-        $this->assertSame($expected, $result);
+        try {
+            $handler = new HTTPOutputHandler();
+            $result = $reflectionShouldShow->invoke($handler, $errorCode);
+            $this->assertSame($expected, $result);
 
-        Deprecation::setShouldShowForCli($cliShouldShowOrig);
-        Deprecation::setShouldShowForHttp($httpShouldShowOrig);
-        $reflectionTriggeringError->setValue($triggeringErrorOrig);
+            Deprecation::setShouldShowForCli($cliShouldShowOrig);
+            Deprecation::setShouldShowForHttp($httpShouldShowOrig);
+            $reflectionDeprecation->setStaticPropertyValue('isTriggeringError', $triggeringErrorOrig);
+        } finally {
+            $reflectionDirector->setStaticPropertyValue('isCliOverride', $origIsCli);
+        }
     }
 }

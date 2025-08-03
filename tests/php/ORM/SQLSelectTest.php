@@ -197,17 +197,61 @@ class SQLSelectTest extends SapphireTest
         $this->assertTrue($query->canSortBy('Name'));
     }
 
+    public static function provideAddOrderBy(): array
+    {
+        return [
+            'single basic clause' => [
+                'orderByClauses' => [
+                    ['Title'],
+                ],
+                'expectedQuery' => 'SELECT ID, Title FROM Page ORDER BY Title ASC',
+            ],
+            'single basic clause with order' => [
+                'orderByClauses' => [
+                    ['Title', 'desc'],
+                ],
+                'expectedQuery' => 'SELECT ID, Title FROM Page ORDER BY Title DESC',
+            ],
+            'single basic clause with order in first arg' => [
+                'orderByClauses' => [
+                    ['Title desc'],
+                ],
+                'expectedQuery' => 'SELECT ID, Title FROM Page ORDER BY Title DESC',
+            ],
+            'single clause column name ends with "asc"' => [
+                'orderByClauses' => [
+                    ['Flasc', 'DESC'],
+                ],
+                'expectedQuery' => 'SELECT ID, Title FROM Page ORDER BY Flasc DESC',
+            ],
+            'multiple clauses' => [
+                'orderByClauses' => [
+                    ['ID'],
+                    ['Title', 'DESC'],
+                ],
+                'expectedQuery' => 'SELECT ID, Title FROM Page ORDER BY ID ASC, Title DESC',
+            ],
+            'custom sort columns' => [
+                'orderByClauses' => [
+                    ['(ID % 2)  = 0', 'ASC'],
+                    ['ID > 50', 'ASC'],
+                ],
+                'expectedQuery' => 'SELECT ID, Title, (ID % 2)  = 0 AS "_SortColumn0", ID > 50 AS "_SortColumn1" FROM Page ORDER BY "_SortColumn0" ASC, "_SortColumn1" ASC',
+            ],
+        ];
+    }
+
     /**
-     * Test multiple order by SQL clauses.
+     * @dataProvider provideAddOrderBy
      */
-    public function testAddOrderBy()
+    public function testAddOrderBy(array $orderByClauses, string $expectedQuery): void
     {
         $query = new SQLSelect();
-        $query->setSelect('ID', "Title")->setFrom('Page')->addOrderBy('(ID % 2)  = 0', 'ASC')->addOrderBy('ID > 50', 'ASC');
-        $this->assertSQLEquals(
-            'SELECT ID, Title, (ID % 2)  = 0 AS "_SortColumn0", ID > 50 AS "_SortColumn1" FROM Page ORDER BY "_SortColumn0" ASC, "_SortColumn1" ASC',
-            $query->sql($parameters)
-        );
+        $query->setSelect('ID', "Title")->setFrom('Page');
+        foreach ($orderByClauses as $clause) {
+            $query->addOrderBy(...$clause);
+        }
+        $this->assertSQLEquals($expectedQuery, $query->sql($parameters));
     }
 
     public function testSelectWithChainedFilterParameters()
@@ -1326,5 +1370,102 @@ class SQLSelectTest extends SapphireTest
         $this->expectExceptionMessage('WITH clause with name \'cte\' already exists.');
 
         $select->addWith('cte', new SQLSelect());
+    }
+
+    public function subqueryProvider()
+    {
+        return [
+            'no-explicit-alias-string' => ['( SELECT DISTINCT "SQLSelectTest_DO"."ClassName" FROM "SQLSelectTest_DO") AS "FINAL"'],
+            'no-alias-array' => [['( SELECT DISTINCT "SQLSelectTest_DO"."ClassName" FROM "SQLSelectTest_DO") AS "FINAL"']],
+            'no-alias-array-numeric-key' => [[0 => '( SELECT DISTINCT "SQLSelectTest_DO"."ClassName" FROM "SQLSelectTest_DO") AS "FINAL"']],
+            'explicit-alias-string' => [['FINAL' => '( SELECT DISTINCT "SQLSelectTest_DO"."ClassName" FROM "SQLSelectTest_DO")']],
+        ];
+    }
+
+    /**
+     * @dataProvider subqueryProvider
+     */
+    public function testSubqueries($subquery)
+    {
+        $query = new SQLSelect('*', $subquery);
+
+        $actualSQL = $query->sql();
+
+        $this->assertSQLEquals(
+            'SELECT * FROM ( SELECT DISTINCT "SQLSelectTest_DO"."ClassName" FROM "SQLSelectTest_DO") AS "FINAL"',
+            $actualSQL
+        );
+    }
+
+    public function addFromProvider()
+    {
+        return [
+            'string' => [
+                'MyTable', ['MyTable' => 'MyTable'],
+                'Plain table name get alias automatic alias'
+            ],
+            'string padded with spaces' => [
+                ' MyTable  ', [' MyTable  ' => ' MyTable  '],
+                'Plain table name get alias automatic alias'
+            ],
+            'quoted string' => [
+                '"MyTable"', ['MyTable' => '"MyTable"'],
+                'Quoted table name get alias without the quotes'
+            ],
+            'underscore in table name string' => [
+                '"My_Table_123"', ['My_Table_123' => '"My_Table_123"'],
+                'Numbers and underscores are allowed in table names'
+            ],
+            'backtick string' => [
+                '`MyTable`', ['MyTable' => '`MyTable`'],
+                'Backtick quoted table name get alias without the quotes'
+            ],
+            'subquery string' => [
+                ' (SELECT * from "FooBar") as FooBar ', [' (SELECT * from "FooBar") as FooBar '],
+                'String that don\'t look like table name don\'t get alias'
+            ],
+            'array' => [
+                ['MyTable'], ['MyTable'],
+                'Arrays are passed through as is'
+            ],
+            'array-associative-key' => [
+                ['MyTableAlias' => 'MyTable'], ['MyTableAlias' => 'MyTable'],
+                'Associative arrays are passed through as is and aliases are preserved'
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider addFromProvider
+     */
+    public function testAddFrom($input, $out, $message = ""): void
+    {
+        $query = new SQLSelect();
+        $query->addFrom($input);
+        $this->assertEquals($out, $query->getFrom(), $message);
+    }
+
+    public function testAddFromRetainPreviousData()
+    {
+        // Initial setup
+        $query = new SQLSelect();
+        $query->addFrom('MyTable');
+        $query->addFrom('"MyOtherTable"');
+
+        // This will override some value and add a new one
+        $query->addFrom([
+            'MyTable' => '(SELECT * FROM "MyTable" where "Foo" = "Bar")',
+            'ThirdTable',
+        ]);
+
+        $this->assertEquals(
+            [
+                'MyTable' => '(SELECT * FROM "MyTable" where "Foo" = "Bar")',
+                'MyOtherTable' => '"MyOtherTable"',
+                'ThirdTable',
+            ],
+            $query->getFrom(),
+            'MyTable entry got merge over, MyOtherTable was retained, ThirdTable was added'
+        );
     }
 }

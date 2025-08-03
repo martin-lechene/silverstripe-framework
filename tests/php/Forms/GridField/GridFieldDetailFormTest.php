@@ -2,14 +2,20 @@
 
 namespace SilverStripe\Forms\Tests\GridField;
 
+use LogicException;
+use ReflectionMethod;
 use SilverStripe\Control\Controller;
+use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Dev\CSSContentParser;
 use SilverStripe\Dev\FunctionalTest;
+use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\Form;
 use SilverStripe\Forms\GridField\GridField;
+use SilverStripe\Forms\GridField\GridFieldConfig_RecordEditor;
 use SilverStripe\Forms\GridField\GridFieldDetailForm;
 use SilverStripe\Forms\GridField\GridFieldDetailForm_ItemRequest;
 use SilverStripe\Forms\HiddenField;
+use SilverStripe\Forms\Tests\GridField\GridFieldDetailFormTest\ArrayDataWithID;
 use SilverStripe\Forms\Tests\GridField\GridFieldDetailFormTest\Category;
 use SilverStripe\Forms\Tests\GridField\GridFieldDetailFormTest\CategoryController;
 use SilverStripe\Forms\Tests\GridField\GridFieldDetailFormTest\GroupController;
@@ -18,6 +24,8 @@ use SilverStripe\Forms\Tests\GridField\GridFieldDetailFormTest\PeopleGroup;
 use SilverStripe\Forms\Tests\GridField\GridFieldDetailFormTest\Person;
 use SilverStripe\Forms\Tests\GridField\GridFieldDetailFormTest\PolymorphicPeopleGroup;
 use SilverStripe\Forms\Tests\GridField\GridFieldDetailFormTest\TestController;
+use SilverStripe\ORM\ArrayList;
+use SilverStripe\View\ArrayData;
 
 class GridFieldDetailFormTest extends FunctionalTest
 {
@@ -350,9 +358,10 @@ class GridFieldDetailFormTest extends FunctionalTest
             '//tr[contains(@class, "ss-gridfield-item") and contains(@data-id, "'
             . $group->ID . '")]//a'
         );
-        $this->assertEquals(
-            'GridFieldDetailFormTest_GroupController/Form/field/testfield/item/' . $group->ID . '/edit',
-            (string)$groupEditLink[0]['href']
+        $this->assertSame(
+            '/GridFieldDetailFormTest_GroupController/Form/field/testfield/item/' . $group->ID
+            . '/edit?gridState-testfield-0=%7B%22Readonly%22%3Afalse%7D',
+            (string) $groupEditLink[0]['href']
         );
 
         // Get second level form (GridField managing Person)
@@ -363,15 +372,11 @@ class GridFieldDetailFormTest extends FunctionalTest
             '//fieldset[@id="Form_ItemEditForm_People"]' .
             '//tr[contains(@class, "ss-gridfield-item") and contains(@data-id, "' . $person->ID . '")]//a'
         );
-        $this->assertEquals(
-            sprintf(
-                '/GridFieldDetailFormTest_GroupController/Form/field/testfield/item/%d/ItemEditForm/field/People'
-                . '/item/%d/edit%s',
-                $group->ID,
-                $person->ID,
-                '?gridState-People-1=%7B%22GridFieldAddRelation%22%3Anull%7D'
-            ),
-            (string)$personEditLink[0]['href']
+        $this->assertSame(
+            "/GridFieldDetailFormTest_GroupController/Form/field/testfield/item/{$group->ID}/ItemEditForm/field/People"
+            . "/item/{$person->ID}/edit"
+            . '?gridState-People-1=%7B%22Readonly%22%3Afalse%2C%22GridFieldAddRelation%22%3Anull%7D',
+            (string) $personEditLink[0]['href']
         );
 
         // Get third level form (GridField managing Category)
@@ -382,16 +387,11 @@ class GridFieldDetailFormTest extends FunctionalTest
             '//fieldset[@id="Form_ItemEditForm_Categories"]'
             . '//tr[contains(@class, "ss-gridfield-item") and contains(@data-id, "' . $category->ID . '")]//a'
         );
-        $this->assertEquals(
-            sprintf(
-                '/GridFieldDetailFormTest_GroupController/Form/field/testfield/item/%d/ItemEditForm/field/People'
-                . '/item/%d/ItemEditForm/field/Categories/item/%d/edit%s',
-                $group->ID,
-                $person->ID,
-                $category->ID,
-                '?gridState-Categories-2=%7B%22GridFieldAddRelation%22%3Anull%7D'
-            ),
-            (string)$categoryEditLink[0]['href']
+        $this->assertSame(
+            "/GridFieldDetailFormTest_GroupController/Form/field/testfield/item/{$group->ID}/ItemEditForm/field/People"
+            . "/item/{$person->ID}/ItemEditForm/field/Categories/item/{$category->ID}/edit"
+            . '?gridState-Categories-2=%7B%22Readonly%22%3Afalse%2C%22GridFieldAddRelation%22%3Anull%7D',
+            (string) $categoryEditLink[0]['href']
         );
 
         // Fourth level form would be a Category detail view
@@ -486,5 +486,122 @@ class GridFieldDetailFormTest extends FunctionalTest
         );
 
         $this->autoFollowRedirection = $origAutoFollow;
+    }
+
+    public function provideGetRecordFromRequestFindExisting()
+    {
+        return [
+            'No records' => [
+                'data' => [],
+                'hasRecord' => false,
+            ],
+            'Records exist but without ID field' => [
+                'data' => [new ArrayDataWithID()],
+                'hasRecord' => false,
+            ],
+            'Record exists with matching ID' => [
+                'data' => [new ArrayDataWithID(['ID' => 32])],
+                'hasRecord' => true,
+            ],
+            'Record exists, no matching ID' => [
+                'data' => [new ArrayDataWithID(['ID' => 1])],
+                'hasRecord' => false,
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideGetRecordFromRequestFindExisting
+     */
+    public function testGetRecordFromRequestFindExisting(array $data, bool $hasRecord)
+    {
+        $controller = new TestController();
+        $form = $controller->Form(null, new ArrayList($data));
+        $gridField = $form->Fields()->dataFieldByName('testfield');
+        if (empty($data)) {
+            $gridField->setModelClass(ArrayDataWithID::class);
+        }
+        $component = $gridField->getConfig()->getComponentByType(GridFieldDetailForm::class);
+        $request = new HTTPRequest('GET', $gridField->Link('item/32'));
+        $request->match(Controller::join_links($gridField->Link(), 'item/$ID'));
+
+        $reflectionMethod = new ReflectionMethod($component, 'getRecordFromRequest');
+        $reflectionMethod->setAccessible(true);
+        $this->assertSame($hasRecord, (bool) $reflectionMethod->invoke($component, $gridField, $request));
+    }
+
+    public function provideGetRecordFromRequestCreateNew()
+    {
+        // Note that in all of these scenarios a new record gets created, so it *shouldn't* matter what's already in there.
+        return [
+            'No records' => [
+                'data' => [],
+            ],
+            'Records exist but without ID field' => [
+                'data' => [new ArrayDataWithID()],
+            ],
+            'Record exists with ID field' => [
+                'data' => [new ArrayDataWithID(['ID' => 32])],
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideGetRecordFromRequestCreateNew
+     */
+    public function testGetRecordFromRequestCreateNew(array $data)
+    {
+        $controller = new TestController();
+        $form = $controller->Form(null, new ArrayList($data));
+        $gridField = $form->Fields()->dataFieldByName('testfield');
+        if (empty($data)) {
+            $gridField->setModelClass(ArrayDataWithID::class);
+        }
+        $component = $gridField->getConfig()->getComponentByType(GridFieldDetailForm::class);
+        $request = new HTTPRequest('GET', $gridField->Link('item/new'));
+        $request->match(Controller::join_links($gridField->Link(), 'item/$ID'));
+
+        $reflectionMethod = new ReflectionMethod($component, 'getRecordFromRequest');
+        $reflectionMethod->setAccessible(true);
+        $this->assertEquals(new ArrayDataWithID(['ID' => 0]), $reflectionMethod->invoke($component, $gridField, $request));
+    }
+
+    public function provideGetRecordFromRequestWithoutData()
+    {
+        // Note that in all of these scenarios a new record gets created, so it *shouldn't* matter what's already in there.
+        return [
+            'No records' => [
+                'data' => [],
+            ],
+            'Records exist but without ID field' => [
+                'data' => [new ArrayData()],
+            ],
+            'Record exists with ID field' => [
+                'data' => [new ArrayData(['ID' => 32])],
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideGetRecordFromRequestWithoutData
+     */
+    public function testGetRecordFromRequestWithoutData(array $data)
+    {
+        $controller = new TestController();
+        $form = $controller->Form(null, new ArrayList($data));
+        $gridField = $form->Fields()->dataFieldByName('testfield');
+        if (empty($data)) {
+            $gridField->setModelClass(ArrayData::class);
+        }
+        $component = $gridField->getConfig()->getComponentByType(GridFieldDetailForm::class);
+        $request = new HTTPRequest('GET', $gridField->Link('item/new'));
+        $request->match(Controller::join_links($gridField->Link(), 'item/$ID'));
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage(ArrayData::class . ' must have an ID field.');
+
+        $reflectionMethod = new ReflectionMethod($component, 'getRecordFromRequest');
+        $reflectionMethod->setAccessible(true);
+        $reflectionMethod->invoke($component, $gridField, $request);
     }
 }

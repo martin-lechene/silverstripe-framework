@@ -9,14 +9,19 @@ use SilverStripe\View\ArrayData;
 use ArrayAccess;
 use Exception;
 use IteratorIterator;
+use SilverStripe\Dev\Deprecation;
 use Traversable;
 
 /**
  * A decorator that wraps around a data list in order to provide pagination.
+ *
+ * @template TList of SS_List
+ * @template T
+ * @extends ListDecorator<TList, T>
+ * @deprecated 5.4.0 Will be renamed to SilverStripe\Model\List\PaginatedList
  */
 class PaginatedList extends ListDecorator
 {
-
     protected $request;
     protected $getVar = 'start';
 
@@ -28,7 +33,7 @@ class PaginatedList extends ListDecorator
     /**
      * Constructs a new paginated list instance around a list.
      *
-     * @param SS_List $list The list to paginate. The getRange method will
+     * @param TList<T> $list The list to paginate. The getRange method will
      *        be used to get the subset of objects to show.
      * @param array|ArrayAccess $request Either a map of request parameters or
      *        request object that the pagination offset is read from.
@@ -36,6 +41,10 @@ class PaginatedList extends ListDecorator
      */
     public function __construct(SS_List $list, $request = [])
     {
+        Deprecation::withSuppressedNotice(function () {
+            Deprecation::notice('5.4.0', 'Will be renamed to SilverStripe\Model\List\PaginatedList', Deprecation::SCOPE_CLASS);
+        });
+
         if (!is_array($request) && !$request instanceof ArrayAccess) {
             throw new Exception('The request must be readable as an array.');
         }
@@ -531,9 +540,11 @@ class PaginatedList extends ListDecorator
 
     /**
      * Returns the total number of items in the list
+     * @depreated 5.4.0 Use getTotalItems() instead.
      */
     public function TotalItems()
     {
+        Deprecation::notice('5.4.0', 'Use getTotalItems() instead.');
         return $this->getTotalItems();
     }
 

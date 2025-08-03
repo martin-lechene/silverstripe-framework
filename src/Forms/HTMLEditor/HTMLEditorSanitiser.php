@@ -6,6 +6,8 @@ use DOMAttr;
 use DOMElement;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injectable;
+use SilverStripe\Core\XssSanitiser;
+use SilverStripe\Dev\Deprecation;
 use SilverStripe\View\Parsers\HTMLValue;
 use stdClass;
 
@@ -33,12 +35,22 @@ class HTMLEditorSanitiser
      */
     private static $link_rel_value = 'noopener noreferrer';
 
-    /** @var stdClass - $element => $rule hash for whitelist element rules where the element name isn't a pattern */
+    /**
+     * @var stdClass - $element => $rule hash for whitelist element rules where the element name isn't a pattern
+     * @deprecated 5.4.0 Will be replaced with SilverStripe\Forms\HTMLEditor\HTMLEditorRuleSet in a future major release
+     */
     protected $elements = [];
-    /** @var stdClass - Sequential list of whitelist element rules where the element name is a pattern */
+
+    /**
+     * @var stdClass - Sequential list of whitelist element rules where the element name is a pattern
+     * @deprecated 5.4.0 Will be replaced with SilverStripe\Forms\HTMLEditor\HTMLEditorRuleSet in a future major release
+     */
     protected $elementPatterns = [];
 
-    /** @var stdClass - The list of attributes that apply to all further whitelisted elements added */
+    /**
+     * @var stdClass - The list of attributes that apply to all further whitelisted elements added
+     * @deprecated 5.4.0 Will be replaced with SilverStripe\Forms\HTMLEditor\HTMLEditorRuleSet in a future major release
+     */
     protected $globalAttributes = [];
 
     /**
@@ -67,9 +79,14 @@ class HTMLEditorSanitiser
      *
      * @param $str - The TinyMCE pattern
      * @return string - The equivalent regex
+     * @deprecated 5.4.0 Will be replaced with SilverStripe\Forms\HTMLEditor\HTMLEditorRuleSet::patternToRegex() in a future major release
      */
     protected function patternToRegex($str)
     {
+        Deprecation::noticeWithNoReplacment(
+            '5.4.0',
+            'Will be replaced with SilverStripe\Forms\HTMLEditor\HTMLEditorRuleSet::patternToRegex() in a future major release'
+        );
         return '/^' . preg_replace('/([?+*])/', '.$1', $str ?? '') . '$/';
     }
 
@@ -80,9 +97,14 @@ class HTMLEditorSanitiser
      * Logic based heavily on javascript version from tiny_mce_src.js
      *
      * @param string $validElements - The valid_elements or extended_valid_elements string to add to the whitelist
+     * @deprecated 5.4.0 Will be replaced with SilverStripe\Forms\HTMLEditor\HTMLEditorRuleSet in a future major release
      */
     protected function addValidElements($validElements)
     {
+        Deprecation::noticeWithNoReplacment(
+            '5.4.0',
+            'Will be replaced with SilverStripe\Forms\HTMLEditor\HTMLEditorRuleSet in a future major release'
+        );
         $elementRuleRegExp = '/^([#+\-])?([^\[\/]+)(?:\/([^\[]+))?(?:\[([^\]]+)\])?$/';
         $attrRuleRegExp = '/^([!\-])?(\w+::\w+|[^=:<]+)?(?:([=:<])(.*))?$/';
         $hasPatternsRegExp = '/[*?+]/';
@@ -185,9 +207,14 @@ class HTMLEditorSanitiser
      * Given an element tag, return the rule structure for that element
      * @param string $tag The element tag
      * @return stdClass The element rule
+     * @deprecated 5.4.0 Will be replaced with SilverStripe\Forms\HTMLEditor\HTMLEditorRuleSet::getRuleForElement() in a future major release
      */
     protected function getRuleForElement($tag)
     {
+        Deprecation::noticeWithNoReplacment(
+            '5.4.0',
+            'Will be replaced with SilverStripe\Forms\HTMLEditor\HTMLEditorRuleSet::getRuleForElement() in a future major release'
+        );
         if (isset($this->elements[$tag])) {
             return $this->elements[$tag];
         }
@@ -205,9 +232,14 @@ class HTMLEditorSanitiser
      * @param object $elementRule
      * @param string $name The attribute name
      * @return stdClass The attribute rule
+     * @deprecated 5.4.0 Will be replaced with logic in SilverStripe\Forms\HTMLEditor\HTMLEditorElementRule in a future major release
      */
     protected function getRuleForAttribute($elementRule, $name)
     {
+        Deprecation::noticeWithNoReplacment(
+            '5.4.0',
+            'Will be replaced with logic in SilverStripe\Forms\HTMLEditor\HTMLEditorElementRule in a future major release'
+        );
         if (isset($elementRule->attributes[$name])) {
             return $elementRule->attributes[$name];
         }
@@ -224,9 +256,14 @@ class HTMLEditorSanitiser
      * @param DOMElement $element The element to check
      * @param stdClass $rule The rule to check against
      * @return bool True if the element passes (and so can be kept), false if it fails (and so needs stripping)
+     * @deprecated 5.4.0 Will be replaced with SilverStripe\Forms\HTMLEditor\HTMLEditorRuleSet::isElementAllowed() in a future major release
      */
     protected function elementMatchesRule($element, $rule = null)
     {
+        Deprecation::noticeWithNoReplacment(
+            '5.4.0',
+            'Will be replaced with SilverStripe\Forms\HTMLEditor\HTMLEditorRuleSet::isElementAllowed() in a future major release'
+        );
         // If the rule doesn't exist at all, the element isn't allowed
         if (!$rule) {
             return false;
@@ -262,9 +299,14 @@ class HTMLEditorSanitiser
      * @param DOMAttr $attr - the attribute to check
      * @param stdClass $rule - the rule to check against
      * @return bool - true if the attribute passes (and so can be kept), false if it fails (and so needs stripping)
+     * @deprecated 5.4.0 Will be replaced with SilverStripe\Forms\HTMLEditor\HTMLEditorElementRule::isAttributeAllowed() in a future major release
      */
     protected function attributeMatchesRule($attr, $rule = null)
     {
+        Deprecation::noticeWithNoReplacment(
+            '5.4.0',
+            'Will be replaced with SilverStripe\Forms\HTMLEditor\HTMLEditorElementRule::isAttributeAllowed() in a future major release'
+        );
         // If the rule doesn't exist at all, the attribute isn't allowed
         if (!$rule) {
             return false;
@@ -287,12 +329,12 @@ class HTMLEditorSanitiser
      */
     public function sanitise(HTMLValue $html)
     {
-        if (!$this->elements && !$this->elementPatterns) {
-            return;
-        }
-
         $linkRelValue = $this->config()->get('link_rel_value');
         $doc = $html->getDocument();
+        // Get a sanitiser but don't deny any specific attributes or elements, since that's
+        // handled as part of the element rules.
+        $xssSanitiser = XssSanitiser::create();
+        $xssSanitiser->setElementsToRemove([])->setAttributesToRemove([]);
 
         /** @var DOMElement $el */
         foreach ($html->query('//body//*') as $el) {
@@ -346,16 +388,8 @@ class HTMLEditorSanitiser
                     $el->setAttribute($attr, $forced);
                 }
 
-                // Matches "javascript:" with any arbitrary linebreaks inbetween the characters.
-                $regex = '/^\s*' . implode('\s*', str_split('javascript:')) . '/i';
-                // Strip out javascript execution in href or src attributes.
-                foreach (['src', 'href', 'data'] as $dangerAttribute) {
-                    if ($el->hasAttribute($dangerAttribute)) {
-                        if (preg_match($regex, $el->getAttribute($dangerAttribute))) {
-                            $el->removeAttribute($dangerAttribute);
-                        }
-                    }
-                }
+                // Explicit XSS sanitisation for anything that there's really no sensible use case for in a WYSIWYG
+                $xssSanitiser->sanitiseElement($el);
             }
 
             if ($el->tagName === 'a' && $linkRelValue !== null) {

@@ -3,11 +3,13 @@
 namespace SilverStripe\Core\Manifest;
 
 use InvalidArgumentException;
-use SilverStripe\Core\Config\Config;
+use Composer\InstalledVersions;
+use SilverStripe\Dev\Deprecation;
 use Psr\SimpleCache\CacheInterface;
+use SilverStripe\Core\Config\Config;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injectable;
-use SilverStripe\Core\Injector\Injector;
 
 /**
  * The version provider will look up configured modules and examine the composer.lock file
@@ -30,7 +32,7 @@ class VersionProvider
     use Injectable;
 
     /**
-     * @var array
+     * @var array<string,string>
      */
     private static $modules = [
         'silverstripe/framework' => 'Framework',
@@ -50,10 +52,10 @@ class VersionProvider
             return $version;
         }
         $modules = $this->getModules();
-        $lockModules = $this->getModuleVersionFromComposer(array_keys($modules ?? []));
+        $lockModules = $this->getModuleVersionFromComposer(array_keys($modules));
         $moduleVersions = [];
         foreach ($modules as $module => $title) {
-            if (!array_key_exists($module, $lockModules ?? [])) {
+            if (!array_key_exists($module, $lockModules)) {
                 continue;
             }
             $version = $lockModules[$module];
@@ -145,14 +147,14 @@ class VersionProvider
      *   cwp/cwp-core => ['CWP', '4.4.4']
      * ]
      *
-     * @param array $modules
-     * @return array
+     * @param array<string,array<int,string>> $modules
+     * @return array<string,array<int,string>>
      */
     private function filterModules(array $modules)
     {
         $accountModule = [];
         foreach ($modules as $module => $value) {
-            if (!preg_match('#^([a-z0-9\-]+)/([a-z0-9\-]+)$#', $module ?? '', $m)) {
+            if (!preg_match('#^([a-z0-9\-]+)/([a-z0-9\-]+)$#', $module, $m)) {
                 continue;
             }
             $account = $m[1];
@@ -169,30 +171,28 @@ class VersionProvider
     /**
      * Gets the configured core modules to use for the SilverStripe application version
      *
-     * @return array
+     * @return array<string,string>
      */
     public function getModules()
     {
-        $modules = Config::inst()->get(self::class, 'modules');
+        $modules = Config::inst()->get(VersionProvider::class, 'modules');
         return !empty($modules) ? $modules : ['silverstripe/framework' => 'Framework'];
     }
 
     /**
      * Tries to obtain version number from composer.lock if it exists
      *
-     * @param array $modules
-     * @return array
+     * @param array<string> $modules
+     * @return array<string|string>
      */
     public function getModuleVersionFromComposer($modules = [])
     {
         $versions = [];
-        $lockData = $this->getComposerLock();
-        if ($lockData && !empty($lockData['packages'])) {
-            foreach ($lockData['packages'] as $package) {
-                if (in_array($package['name'], $modules ?? []) && isset($package['version'])) {
-                    $versions[$package['name']] = $package['version'];
-                }
+        foreach ($modules as $module) {
+            if (!InstalledVersions::isInstalled($module)) {
+                continue;
             }
+            $versions[$module] = InstalledVersions::getPrettyVersion($module);
         }
         return $versions;
     }
@@ -200,43 +200,50 @@ class VersionProvider
     /**
      * Load composer.lock's contents and return it
      *
+     * @deprecated 5.1.0 Has been replaced by composer-runtime-api
      * @param bool $cache
      * @return array
      */
     protected function getComposerLock($cache = true)
     {
+        Deprecation::notice("5.1", "Has been replaced by composer-runtime-api", Deprecation::SCOPE_METHOD);
         $composerLockPath = $this->getComposerLockPath();
-        if (!file_exists($composerLockPath ?? '')) {
+        if (!file_exists($composerLockPath)) {
             return [];
         }
 
         $lockData = [];
-        $jsonData = file_get_contents($composerLockPath ?? '');
+        $jsonData = file_get_contents($composerLockPath);
+        $jsonData = $jsonData ? $jsonData : '';
+        $cacheKey = md5($jsonData);
 
         if ($cache) {
             $cache = Injector::inst()->get(CacheInterface::class . '.VersionProvider_composerlock');
-            $cacheKey = md5($jsonData ?? '');
             if ($versions = $cache->get($cacheKey)) {
-                $lockData = json_decode($versions ?? '', true);
+                $lockData = json_decode($versions, true);
             }
         }
 
         if (empty($lockData) && $jsonData) {
-            $lockData = json_decode($jsonData ?? '', true);
+            $lockData = json_decode($jsonData, true);
 
             if ($cache) {
                 $cache->set($cacheKey, $jsonData);
             }
         }
 
+        $lockData = $lockData ? $lockData : [];
+
         return $lockData;
     }
 
     /**
      * @return string
+     * @deprecated 5.4.0 Will be removed without equivalent functionality to replace it in a future major release.
      */
     protected function getComposerLockPath(): string
     {
+        Deprecation::noticeWithNoReplacment('5.4.0');
         return BASE_PATH . '/composer.lock';
     }
 }

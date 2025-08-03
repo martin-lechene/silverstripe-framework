@@ -8,6 +8,7 @@ use SilverStripe\Assets\FileNameFilter;
 use SilverStripe\Assets\Filesystem;
 use SilverStripe\Assets\Folder;
 use SilverStripe\Assets\Image;
+use SilverStripe\Control\Director;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\CSSContentParser;
 use SilverStripe\Dev\FunctionalTest;
@@ -74,7 +75,7 @@ class HTMLEditorFieldTest extends FunctionalTest
         $inputText = "These are some unicodes: ä, ö, & ü";
         $field = new HTMLEditorField("Test", "Test");
         $field->setValue($inputText);
-        $this->assertStringContainsString('These are some unicodes: &auml;, &ouml;, &amp; &uuml;', $field->Field());
+        $this->assertStringContainsString('These are some unicodes: ä, ö, & ü', $field->Field());
         // Test shortcodes
         $inputText = "Shortcode: [file_link id=4]";
         $field = new HTMLEditorField("Test", "Test");
@@ -181,7 +182,9 @@ class HTMLEditorFieldTest extends FunctionalTest
         $this->assertEquals(
             <<<EOS
 <span class="readonly typography" id="Content">
-	<img src="/assets/HTMLEditorFieldTest/f5c7c2f814/example__ResizedImageWzEwLDIwXQ.jpg" alt="" width="10" height="20" loading="lazy">
+	<img width="10" height="20" alt="" src="/assets/HTMLEditorFieldTest/f5c7c2f814/example__ResizedImageWzEwLDIwXQ.jpg" loading="lazy">
+
+
 </span>
 
 
@@ -198,7 +201,9 @@ EOS
         $this->assertEquals(
             <<<EOS
 <span class="readonly typography" id="Content">
-	<img src="/assets/HTMLEditorFieldTest/f5c7c2f814/example__ResizedImageWzEwLDIwXQ.jpg" alt="" width="10" height="20" loading="lazy">
+	<img width="10" height="20" alt="" src="/assets/HTMLEditorFieldTest/f5c7c2f814/example__ResizedImageWzEwLDIwXQ.jpg" loading="lazy">
+
+
 </span>
 
 	<input type="hidden" name="Content" value="[image src=&quot;/assets/HTMLEditorFieldTest/f5c7c2f814/example.jpg&quot; width=&quot;10&quot; height=&quot;20&quot; id=&quot;{$fileID}&quot;]" />
@@ -210,25 +215,84 @@ EOS
         );
     }
 
-    public function testValueEntities()
+    public function provideTestValueEntities()
     {
-        $inputText = "The company &amp; partners";
+        return [
+            "ampersand" => [
+                "The company &amp; partners",
+                "The company &amp; partners"
+            ],
+            "double ampersand" => [
+                "The company &amp;amp; partners",
+                "The company &amp;amp; partners"
+            ],
+            "left arrow and right arrow" => [
+                "<p>&lt;strong&gt;The company &amp;amp; partners&lt;/strong&gt;</p>",
+                "<p>&amp;lt;strong&amp;gt;The company &amp;amp; partners&amp;lt;/strong&amp;gt;</p>"
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideTestValueEntities
+     */
+    public function testValueEntities(string $input, string $result)
+    {
         $field = new HTMLEditorField("Content");
-        $field->setValue($inputText);
+        $field->setValue($input);
 
         $this->assertEquals(
-            "The company &amp; partners",
+            $result,
             $field->obj('ValueEntities')->forTemplate()
         );
+    }
 
-        $inputText = "The company &amp;&amp; partners";
-        $field = new HTMLEditorField("Content");
-        $field->setValue($inputText);
-
-        $this->assertEquals(
-            "The company &amp;&amp; partners",
-            $field->obj('ValueEntities')->forTemplate()
-        );
+    public function testGetAttributes()
+    {
+        // If silverstripe/admin isn't installed, we can't get TinyMCEConfig attributes
+        // unless we set up some expected config pointing to expected files.
+        if (!TinyMCEConfig::config()->get('base_dir')) {
+            // Copied from TinyMCECombinedGeneratorTest::setUp()
+            Director::config()->set('alternate_base_folder', __DIR__ . '/TinyMCECombinedGeneratorTest');
+            Director::config()->set('alternate_public_dir', '');
+            TinyMCEConfig::config()->set('base_dir', 'tinymce');
+            TinyMCEConfig::config()->set('editor_css', ['mycode/editor.css']);
+        }
+        // Create an editor and set fixed_row_height to 0
+        $editor = HTMLEditorField::create('Content');
+        $editor->config()->set('fixed_row_height', 0);
+        // Get the attributes and config from the editor
+        $attributes = $editor->getAttributes();
+        $data_config = json_decode($attributes['data-config'], true);
+        // If fixed_row_height is 0 then row_height and height config are not set
+        $this->assertArrayNotHasKey('height', $data_config, 'Config height should not be set');
+        $this->assertArrayNotHasKey('row_height', $data_config, 'Config row_height should not be set');
+        // Set the fixed_row_height back to 20px
+        $editor->config()->set('fixed_row_height', 20);
+        // Set the rows to 0
+        $editor->setRows(0);
+        // Get the attributes and config from the editor
+        $attributes = $editor->getAttributes();
+        $data_config = json_decode($attributes['data-config'], true);
+        // If rows is 0 then row_height and height config are not set
+        $this->assertArrayNotHasKey('height', $data_config, 'Config height should not be set');
+        $this->assertArrayNotHasKey('row_height', $data_config, 'Config row_height should not be set');
+        // Set the rows to 5
+        $editor->setRows(5);
+        // Get the attributes and config from the editor
+        $attributes = $editor->getAttributes();
+        $data_config = json_decode($attributes['data-config']);
+        // Check the height is set to auto and the row height is set to 100px (5 rows * 20px)
+        $this->assertEquals("auto", $data_config->height, 'Config height is not set');
+        $this->assertEquals("100px", $data_config->row_height, 'Config row_height is not set');
+        // Change the row height to 60px and set the rows to 3
+        $editor->setRows(3);
+        // Get the attributes and config from the editor
+        $attributes = $editor->getSchemaStateDefaults();
+        $data_config = json_decode($attributes['data']['attributes']['data-config']);
+        // Check the height is set to auto and the row height is set to 60px (3 rows * 20px)
+        $this->assertEquals("auto", $data_config->height, 'Config height is not set');
+        $this->assertEquals("60px", $data_config->row_height, 'Config row_height is not set');
     }
 
     public function testFieldConfigSanitization()
@@ -255,7 +319,7 @@ EOS
         $editor->setEditorConfig($restrictedConfig);
 
         $expectedHtmlString = '<p>standard text</p>Header';
-        $htmlValue = '<p>standard text</p><table><tbody><tr><th></th></tr><tr><td>Header</td></tr></tbody><tbody></tbody></table>';
+        $htmlValue = '<p>standard text</p><table><th><tr><td>Header</td></tr></th><tbody></tbody></table>';
         $editor->setValue($htmlValue);
         $editor->saveInto($obj);
         $this->assertEquals($expectedHtmlString, $obj->Content, 'Table is not removed');

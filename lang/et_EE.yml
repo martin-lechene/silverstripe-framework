@@ -72,6 +72,8 @@ et_EE:
     Saved: 'Salvestatud {name} {link}'
   SilverStripe\Forms\GridField\GridFieldEditButton:
     EDIT: Redigeeri
+  SilverStripe\Forms\GridField\GridFieldFilterHeader:
+    Search_Default: Otsi
   SilverStripe\Forms\GridField\GridFieldPaginator:
     OF: /
     Page: Leht
@@ -84,10 +86,11 @@ et_EE:
   SilverStripe\Forms\NullableField:
     IsNullLabel: 'On tühi'
   SilverStripe\Forms\NumericField:
-    VALIDATION: '''{value}'' ei ole number, sellele väljale võib sisestada ainult numbreid'
+    VALIDATION: "'{value}' ei ole number, sellele väljale võib sisestada ainult numbreid"
   SilverStripe\Forms\TimeField:
     VALIDATEFORMAT: 'Sisestage sobivas vormingus kellaaeg ({format})'
   SilverStripe\ORM\DataObject:
+    FILTER_WITHINRANGE_TO: Kuni
     PLURALNAME: 'Andme objektid'
     SINGULARNAME: 'Andme objekt'
   SilverStripe\ORM\FieldType\DBBoolean:
@@ -169,7 +172,6 @@ et_EE:
     ValidationIdentifierFailed: 'Olemasolevat kasutajat #{id} ei saa sama identifikaatoriga üle kirjutada ({name} = {value})'
     YOUROLDPASSWORD: 'Sinu vana parool'
     belongs_many_many_Groups: Grupid
-    db_Email: Email
     db_FirstName: Eesnimi
     db_Locale: 'kohalik välimus'
     db_LockedOutUntil: 'Suletud kuni'

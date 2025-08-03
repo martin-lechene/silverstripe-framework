@@ -27,6 +27,8 @@ use SilverStripe\View\SSViewer;
 use SilverStripe\View\ThemeManifest;
 use SilverStripe\View\ThemeResourceLoader;
 use Exception;
+use SilverStripe\Control\Middleware\AllowedHostsMiddleware;
+use SilverStripe\Dev\Deprecation;
 
 /**
  * Simple Kernel container
@@ -139,7 +141,7 @@ abstract class BaseKernel implements Kernel
      */
     protected function bootPHP()
     {
-        if ($this->getEnvironment() === self::LIVE) {
+        if ($this->getEnvironment() === BaseKernel::LIVE) {
             // limited to fatal errors and warnings in live mode
             error_reporting(E_ALL & ~(E_DEPRECATED | E_STRICT | E_NOTICE));
         } else {
@@ -221,6 +223,9 @@ abstract class BaseKernel implements Kernel
     {
         // After loading all other app manifests, include _config.php files
         $this->getModuleLoader()->getManifest()->activateConfig();
+
+        // Ensure everything is set up correctly
+        $this->validateConfiguration();
     }
 
     /**
@@ -262,7 +267,7 @@ abstract class BaseKernel implements Kernel
             return $env;
         }
 
-        return self::LIVE;
+        return BaseKernel::LIVE;
     }
 
     abstract public function boot($flush = false);
@@ -308,10 +313,13 @@ abstract class BaseKernel implements Kernel
      * If missing configuration, redirect to install.php if it exists.
      * Otherwise show a server error to the user.
      *
+     * @deprecated 5.3.0 Will be removed without equivalent functionality in a future major release
+     *
      * @param string $msg Optional message to show to the user on an installed project (install.php missing).
      */
     protected function redirectToInstaller($msg = '')
     {
+        Deprecation::notice('5.3.0', 'Will be removed without equivalent functionality in a future major release');
         // Error if installer not available
         if (!file_exists(Director::publicFolder() . '/install.php')) {
             throw new HTTPResponse_Exception(
@@ -353,6 +361,14 @@ abstract class BaseKernel implements Kernel
         $this->booted = $bool;
     }
 
+    /**
+     * Check whether the kernel has booted or not
+     */
+    public function getBooted(): bool
+    {
+        return $this->booted;
+    }
+
     public function shutdown()
     {
     }
@@ -376,6 +392,7 @@ abstract class BaseKernel implements Kernel
         $this->getInjectorLoader()
             ->getManifest()
             ->registerService($this, Kernel::class);
+
         return $this;
     }
 
@@ -427,7 +444,7 @@ abstract class BaseKernel implements Kernel
 
     public function setEnvironment($environment)
     {
-        if (!in_array($environment, [self::DEV, self::TEST, self::LIVE, null])) {
+        if (!in_array($environment, [BaseKernel::DEV, BaseKernel::TEST, BaseKernel::LIVE, null])) {
             throw new InvalidArgumentException(
                 "Director::set_environment_type passed '$environment'.  It should be passed dev, test, or live"
             );
@@ -456,5 +473,28 @@ abstract class BaseKernel implements Kernel
     {
         $this->themeResourceLoader = $themeResourceLoader;
         return $this;
+    }
+
+    /**
+     * Validate configuration of the application is in a good state, ready for use.
+     *
+     * This method can be used to warn developers of any misconfiguration, or configuration
+     * which is missing but should be set according to best practice.
+     *
+     * In some cases, this could be used to halt execution if configuration critical to operation
+     * has not been set.
+     */
+    protected function validateConfiguration(): void
+    {
+        // Log a warning if allowed hosts hasn't been configured.
+        // This can include wildcard, but it must be explicitly set to ensure the developer is aware
+        // of the level of protection their application has against host header injection attacks.
+        $allowedHostsMiddleware = Injector::inst()->get(AllowedHostsMiddleware::class, true);
+        if (empty($allowedHostsMiddleware->getAllowedHosts())) {
+            Injector::inst()->get(LoggerInterface::class)->warning(
+                'Allowed hosts has not been set. Your application could be vulnerable to host header injection attacks.'
+                . ' Either set the SS_ALLOWED_HOSTS environment variable or the AllowedHosts property on ' . AllowedHostsMiddleware::class
+            );
+        }
     }
 }

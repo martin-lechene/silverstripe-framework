@@ -2,15 +2,19 @@
 
 namespace SilverStripe\Security\MemberAuthenticator;
 
+use Psr\Log\LoggerInterface;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\Email\Email;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Control\RequestHandler;
 use SilverStripe\Core\Convert;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\Form;
 use SilverStripe\ORM\FieldType\DBField;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Security;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
+use Symfony\Component\Mime\Exception\RfcComplianceException;
 
 /**
  * Handle login requests from MemberLoginForm
@@ -155,28 +159,28 @@ class LostPasswordHandler extends RequestHandler
      */
     public function forgotPassword(array $data, Form $form): HTTPResponse
     {
-        // Run a first pass validation check on the data
-        $dataValidation = $this->validateForgotPasswordData($data, $form);
-        if ($dataValidation instanceof HTTPResponse) {
-            return $dataValidation;
-        }
+        return Security::withMinimumExecutionTime(function () use ($data, $form) {
+            // Run a first pass validation check on the data
+            $dataValidation = $this->validateForgotPasswordData($data, $form);
+            if ($dataValidation instanceof HTTPResponse) {
+                return $dataValidation;
+            }
 
-        /** @var Member $member */
-        $member = $this->getMemberFromData($data);
+            $member = $this->getMemberFromData($data);
 
-        // Allow vetoing forgot password requests
-        $results = $this->extend('forgotPassword', $member);
-        if ($results && is_array($results) && in_array(false, $results ?? [], true)) {
-            return $this->redirectToLostPassword();
-        }
+            // Allow vetoing forgot password requests
+            $results = $this->extend('forgotPassword', $member);
+            if ($results && is_array($results) && in_array(false, $results ?? [], true)) {
+                return $this->redirectToLostPassword();
+            }
 
-        if ($member) {
-            $token = $member->generateAutologinTokenAndStoreHash();
+            if ($member) {
+                $token = $member->generateAutologinTokenAndStoreHash();
+                $this->sendEmail($member, $token);
+            }
 
-            $this->sendEmail($member, $token);
-        }
-
-        return $this->redirectToSuccess($data);
+            return $this->redirectToSuccess($data);
+        });
     }
 
     /**
@@ -225,20 +229,27 @@ class LostPasswordHandler extends RequestHandler
      */
     protected function sendEmail($member, $token)
     {
-        /** @var Email $email */
-        $email = Email::create()
-            ->setHTMLTemplate('SilverStripe\\Control\\Email\\ForgotPasswordEmail')
-            ->setData($member)
-            ->setSubject(_t(
-                'SilverStripe\\Security\\Member.SUBJECTPASSWORDRESET',
-                "Your password reset link",
-                'Email subject'
-            ))
-            ->addData('PasswordResetLink', Security::getPasswordResetLink($member, $token))
-            ->setTo($member->Email);
+        try {
+            $email = Email::create()
+                ->setHTMLTemplate('SilverStripe\\Control\\Email\\ForgotPasswordEmail')
+                ->setData($member)
+                ->setSubject(_t(
+                    'SilverStripe\\Security\\Member.SUBJECTPASSWORDRESET',
+                    "Your password reset link",
+                    'Email subject'
+                ))
+                ->addData('PasswordResetLink', Security::getPasswordResetLink($member, $token))
+                ->setTo($member->Email);
 
-        $member->extend('updateForgotPasswordEmail', $email);
-        return $email->send();
+            $member->extend('updateForgotPasswordEmail', $email);
+            $email->send();
+            return true;
+        } catch (TransportExceptionInterface | RfcComplianceException $e) {
+            /** @var LoggerInterface $logger */
+            $logger = Injector::inst()->get(LoggerInterface::class);
+            $logger->error('Error sending email in ' . __FILE__ . ' line ' . __LINE__ . ": {$e->getMessage()}");
+            return false;
+        }
     }
 
     /**

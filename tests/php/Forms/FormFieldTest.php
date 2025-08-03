@@ -36,6 +36,8 @@ use SilverStripe\Security\Group;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\PermissionCheckboxSetField;
 use SilverStripe\Security\PermissionCheckboxSetField_Readonly;
+use SilverStripe\Forms\SearchableMultiDropdownField;
+use SilverStripe\Forms\SearchableDropdownField;
 
 class FormFieldTest extends SapphireTest
 {
@@ -467,7 +469,7 @@ class FormFieldTest extends SapphireTest
         $field = new FormField('MyField', 'My Field');
         $validator = new RequiredFields('MyField');
         $form = new Form(null, 'TestForm', new FieldList($field), new FieldList(), $validator);
-        $form->validationResult();
+        $form->validate();
         $schema = $field->getSchemaState();
         $this->assertEquals(
             '"My Field" is required',
@@ -496,7 +498,7 @@ class FormFieldTest extends SapphireTest
 
         // Ensure messages set via updateValidationResult() propagate through to form fields after validation
         $form = new Form(null, 'TestForm', new FieldList($field), new FieldList(), new RequiredFields());
-        $form->validationResult();
+        $form->validate();
         $schema = $field->getSchemaState();
         $this->assertEquals(
             'A test error message',
@@ -553,6 +555,10 @@ class FormFieldTest extends SapphireTest
                     break;
                 case GridState::class:
                     $args = [GridField::create('GF')];
+                    break;
+                case SearchableDropdownField::class:
+                case SearchableMultiDropdownField::class:
+                    $args = ['Test', 'Test', Group::get()];
                     break;
                 //
                 // Fields from other modules included in the kitchensink recipe

@@ -15,6 +15,7 @@ use SilverStripe\Dev\TestOnly;
 use SilverStripe\ORM\Connect\DBSchemaManager;
 use SilverStripe\ORM\FieldType\DBComposite;
 use SilverStripe\ORM\FieldType\DBField;
+use SilverStripe\ORM\FieldType\DBText;
 
 /**
  * Provides dataobject and database schema mapping functionality
@@ -144,7 +145,7 @@ class DataObjectSchema
      *
      * @param string|object $class
      *
-     * @return string
+     * @return class-string<DataObject>
      * @throws InvalidArgumentException
      */
     public function baseDataClass($class)
@@ -206,9 +207,9 @@ class DataObjectSchema
         if (!is_int($options)) {
             throw new InvalidArgumentException("Invalid options " . var_export($options, true));
         }
-        $uninherited = ($options & self::UNINHERITED) === self::UNINHERITED;
-        $dbOnly = ($options & self::DB_ONLY) === self::DB_ONLY;
-        $includeClass = ($options & self::INCLUDE_CLASS) === self::INCLUDE_CLASS;
+        $uninherited = ($options & DataObjectSchema::UNINHERITED) === DataObjectSchema::UNINHERITED;
+        $dbOnly = ($options & DataObjectSchema::DB_ONLY) === DataObjectSchema::DB_ONLY;
+        $includeClass = ($options & DataObjectSchema::INCLUDE_CLASS) === DataObjectSchema::INCLUDE_CLASS;
 
         // Walk class hierarchy
         $db = [];
@@ -261,7 +262,7 @@ class DataObjectSchema
      *
      * @param string $table
      *
-     * @return string|null The FQN of the class, or null if not found
+     * @return class-string<DataObject>|null The FQN of the class, or null if not found
      */
     public function tableClass($table)
     {
@@ -513,7 +514,7 @@ class DataObjectSchema
                 }
                 // Handle has_one which handles multiple reciprocal has_many relations
                 $hasOneClass = $spec['class'];
-                if (($spec[self::HAS_ONE_MULTI_RELATIONAL] ?? false) === true) {
+                if (($spec[DataObjectSchema::HAS_ONE_MULTI_RELATIONAL] ?? false) === true) {
                     $compositeFields[$fieldName] = 'PolymorphicRelationAwareForeignKey';
                     continue;
                 }
@@ -577,7 +578,7 @@ class DataObjectSchema
         }
         $this->defaultDatabaseIndexes[$class] = [];
 
-        $fieldSpecs = $this->fieldSpecs($class, self::UNINHERITED);
+        $fieldSpecs = $this->fieldSpecs($class, DataObjectSchema::UNINHERITED);
         foreach ($fieldSpecs as $field => $spec) {
             /** @var DBField $fieldObj */
             $fieldObj = Injector::inst()->create($spec, $field);
@@ -644,17 +645,22 @@ class DataObjectSchema
         $sort = Config::inst()->get($class, 'default_sort', Config::UNINHERITED);
         $indexes = [];
 
-        if ($sort && is_string($sort)) {
-            $sort = preg_split('/,(?![^()]*+\\))/', $sort ?? '');
+        if ($sort && (is_string($sort) || is_array($sort))) {
+            $sort = $this->normaliseSort($sort);
             foreach ($sort as $value) {
                 try {
                     list ($table, $column) = $this->parseSortColumn(trim($value ?? ''));
                     $table = trim($table ?? '', '"');
                     $column = trim($column ?? '', '"');
-                    if ($table && strtolower($table ?? '') !== strtolower(self::tableName($class) ?? '')) {
+                    if ($table && strtolower($table ?? '') !== strtolower(DataObjectSchema::tableName($class) ?? '')) {
                         continue;
                     }
-                    if ($this->databaseField($class, $column, false)) {
+                    $fieldSpec = $this->databaseField($class, $column, false);
+                    if ($fieldSpec) {
+                        $dbField = Injector::inst()->create($fieldSpec, $column);
+                        if ($dbField instanceof DBText) {
+                            continue;
+                        }
                         $indexes[$column] = [
                             'type' => 'index',
                             'columns' => [$column],
@@ -665,6 +671,20 @@ class DataObjectSchema
             }
         }
         return $indexes;
+    }
+
+    private function normaliseSort(string|array $sort): array
+    {
+        if (is_string($sort)) {
+            return preg_split('/,(?![^()]*+\\))/', $sort ?? '');
+        }
+        // Change associative arrays so the field and sort are both in the value
+        foreach ($sort as $key => $value) {
+            if (!is_numeric($key)) {
+                $sort[$key] = $key . ' ' . $value;
+            }
+        }
+        return $sort;
     }
 
     /**
@@ -714,7 +734,7 @@ class DataObjectSchema
      * @param string $candidateClass
      * @param string $fieldName
      *
-     * @return string
+     * @return class-string<DataObject>|null
      */
     public function classForField($candidateClass, $fieldName)
     {
@@ -945,7 +965,7 @@ class DataObjectSchema
         }
 
         $spec = $hasOnes[$component];
-        return ($spec[self::HAS_ONE_MULTI_RELATIONAL] ?? false) === true;
+        return ($spec[DataObjectSchema::HAS_ONE_MULTI_RELATIONAL] ?? false) === true;
     }
 
     /**
@@ -1239,7 +1259,7 @@ class DataObjectSchema
         }
 
         // Validate bad types on parent relation
-        if ($key === 'from' && $relationClass !== $parentClass) {
+        if ($key === 'from' && $relationClass !== $parentClass && !is_subclass_of($parentClass, $relationClass)) {
             throw new InvalidArgumentException(
                 "many_many through relation {$parentClass}.{$component} {$key} references a field name "
                 . "{$joinClass}::{$relation} of type {$relationClass}; {$parentClass} expected"
@@ -1280,7 +1300,7 @@ class DataObjectSchema
             );
         }
 
-        if (($spec[self::HAS_ONE_MULTI_RELATIONAL] ?? false) === true
+        if (($spec[DataObjectSchema::HAS_ONE_MULTI_RELATIONAL] ?? false) === true
             && $spec['class'] !== DataObject::class
         ) {
             throw new InvalidArgumentException(

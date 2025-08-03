@@ -47,11 +47,11 @@ use SilverStripe\ORM\UnsavedRelationList;
  *
  * @property int $ParentID ID of parent group
  *
- * @method Group Parent() Return parent group
- * @method HasManyList Permissions() List of group permissions
- * @method HasManyList Groups() List of child groups
- * @method ManyManyList Roles() List of PermissionRoles
  * @mixin Hierarchy
+ * @method HasManyList<Group> Groups()
+ * @method Group Parent()
+ * @method HasManyList<Permission> Permissions()
+ * @method ManyManyList<PermissionRole> Roles()
  */
 class Group extends DataObject
 {
@@ -90,13 +90,14 @@ class Group extends DataObject
         'Code' => true,
         'Sort' => true,
     ];
+    
+    private static bool $require_sudo_mode = true;
 
     public function getAllChildren()
     {
         $doSet = new ArrayList();
 
         $children = Group::get()->filter("ParentID", $this->ID);
-        /** @var Group $child */
         foreach ($children as $child) {
             $doSet->push($child);
             $doSet->merge($child->getAllChildren());
@@ -164,12 +165,10 @@ class Group extends DataObject
             $config->removeComponentsByType(GridFieldDeleteAction::class);
             $config->addComponent(GridFieldGroupDeleteAction::create($this->ID), GridFieldPageCount::class);
 
-            /** @var GridFieldAddExistingAutocompleter $autocompleter */
             $autocompleter = $config->getComponentByType(GridFieldAddExistingAutocompleter::class);
             $autocompleter
                 ->setResultsFormat('$Title ($Email)')
                 ->setSearchFields(['FirstName', 'Surname', 'Email']);
-            /** @var GridFieldDetailForm $detailForm */
             $detailForm = $config->getComponentByType(GridFieldDetailForm::class);
             $detailForm
                 ->setItemEditFormCallback(function ($form) use ($group) {
@@ -233,8 +232,8 @@ class Group extends DataObject
                     ) . '<br />' .
                     sprintf(
                         '<a href="%s" class="add-role">%s</a>',
-                        SecurityAdmin::singleton()->Link('show/root#Root_Roles'),
-                        _t('SilverStripe\\Security\\Group.RolesAddEditLink', 'Manage roles')
+                        SecurityAdmin::singleton()->Link('roles'),
+                        _t(__CLASS__ . '.RolesAddEditLink', 'Manage roles')
                     ) .
                     "</p>"
                 )
@@ -306,7 +305,7 @@ class Group extends DataObject
      * See {@link DirectMembers()} for retrieving members without any inheritance.
      *
      * @param string $filter
-     * @return ManyManyList
+     * @return ManyManyList<Member>
      */
     public function Members($filter = '')
     {
@@ -337,6 +336,7 @@ class Group extends DataObject
 
     /**
      * Return only the members directly added to this group
+     * @return ManyManyList<Member>
      */
     public function DirectMembers()
     {
@@ -649,7 +649,7 @@ class Group extends DataObject
      * Returns all of the children for the CMS Tree.
      * Filters to only those groups that the current user can edit
      *
-     * @return ArrayList
+     * @return ArrayList<DataObject>
      */
     public function AllChildrenIncludingDeleted()
     {

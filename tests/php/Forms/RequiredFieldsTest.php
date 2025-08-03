@@ -5,8 +5,11 @@ namespace SilverStripe\Forms\Tests;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Forms\RequiredFields;
 use SilverStripe\Forms\Form;
+use SilverStripe\Forms\SearchableDropdownField;
 use SilverStripe\Forms\TreeDropdownField;
 use SilverStripe\Security\Group;
+use SilverStripe\Forms\TextField;
+use SilverStripe\Forms\FieldList;
 
 class RequiredFieldsTest extends SapphireTest
 {
@@ -289,17 +292,167 @@ class RequiredFieldsTest extends SapphireTest
         );
     }
 
-    public function testTreedropFieldValidation()
+    public function provideHasOneRelationFieldInterfaceValidation(): array
+    {
+        return [
+            [
+                'className' => TreeDropdownField::class,
+            ],
+            [
+                'className' => SearchableDropdownField::class,
+            ]
+        ];
+    }
+
+    /**
+     * @dataProvider provideHasOneRelationFieldInterfaceValidation
+     */
+    public function testHasOneRelationFieldInterfaceValidation(string $className)
     {
         $form = new Form();
-        $field = new TreeDropdownField('TestField', 'TestField', Group::class);
+        $param = $className === TreeDropdownField::class ? Group::class : Group::get();
+        $field = new $className('TestField', 'TestField', $param);
         $form->Fields()->push($field);
         $validator = new RequiredFields('TestField');
         $validator->setForm($form);
-        // blank string and '0' are fail required field validation
+        // blank string and 0 and '0' and array with value of 0 fail required field validation
         $this->assertFalse($validator->php(['TestField' => '']));
+        $this->assertFalse($validator->php(['TestField' => 0]));
         $this->assertFalse($validator->php(['TestField' => '0']));
+        $this->assertFalse($validator->php(['TestField' => ['value' => 0]]));
+        $this->assertFalse($validator->php(['TestField' => ['value' => '0']]));
         // '1' passes required field validation
         $this->assertTrue($validator->php(['TestField' => '1']));
+    }
+
+    public static function provideAllowWhitespaceOnly(): array
+    {
+        return [
+            'no-ws-false' => [
+                'value' => 'abc',
+                'allowWhitespaceOnly' => false,
+                'expected' => true,
+            ],
+            'no-ws-true' => [
+                'value' => 'abc',
+                'allowWhitespaceOnly' => true,
+                'expected' => true,
+            ],
+            'left-ws-false' => [
+                'value' => ' abc',
+                'allowWhitespaceOnly' => false,
+                'expected' => true,
+            ],
+            'left-ws-true' => [
+                'value' => ' abc',
+                'allowWhitespaceOnly' => true,
+                'expected' => true,
+            ],
+            'right-ws-false' => [
+                'value' => 'abc ',
+                'allowWhitespaceOnly' => false,
+                'expected' => true,
+            ],
+            'right-ws-true' => [
+                'value' => 'abc ',
+                'allowWhitespaceOnly' => true,
+                'expected' => true,
+            ],
+            'both-ws-false' => [
+                'value' => ' abc ',
+                'allowWhitespaceOnly' => false,
+                'expected' => true,
+            ],
+            'both-ws-true' => [
+                'value' => ' abc ',
+                'allowWhitespaceOnly' => true,
+                'expected' => true,
+            ],
+            'only-ws-false' => [
+                'value' => ' ',
+                'allowWhitespaceOnly' => false,
+                'expected' => false,
+            ],
+            'only-ws-true' => [
+                'value' => ' ',
+                'allowWhitespaceOnly' => true,
+                'expected' => true,
+            ],
+            'only-ws-nbsp-false' => [
+                'value' => "\xc2\xa0",
+                'allowWhitespaceOnly' => false,
+                'expected' => false,
+            ],
+            'only-ws-nbsp-true' => [
+                'value' => "\xc2\xa0",
+                'allowWhitespaceOnly' => true,
+                'expected' => true,
+            ],
+            'only-ws-unicode-false' => [
+                // zero width no-break space
+                'value' => "\u{2028}",
+                'allowWhitespaceOnly' => false,
+                'expected' => false,
+            ],
+            'only-ws-unicode-true' => [
+                // zero width no-break space
+                'value' => "\u{2028}",
+                'allowWhitespaceOnly' => true,
+                'expected' => true,
+            ],
+            'no-value-false' => [
+                'value' => '',
+                'allowWhitespaceOnly' => false,
+                'expected' => false,
+            ],
+            'no-value-true' => [
+                'value' => '',
+                'allowWhitespaceOnly' => true,
+                'expected' => false,
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideAllowWhitespaceOnly
+     */
+    public function testAllowWhitespaceOnlyConfig(
+        string $value,
+        bool $allowWhitespaceOnly,
+        bool $expected,
+    ): void {
+        $validator = new RequiredFields(['TestField']);
+        $this->assertSame(true, $validator->getAllowWhitespaceOnly());
+        $field = new TextField('TestField');
+        $field->setValue($value);
+        $form = new Form(null, null, new FieldList([$field]), null, $validator);
+        RequiredFields::config()->set('allow_whitespace_only', $allowWhitespaceOnly);
+        $result = $validator->validate($form);
+        $this->assertEquals($expected, $result->isValid());
+    }
+
+    /**
+     * @dataProvider provideAllowWhitespaceOnly
+     */
+    public function testAllowWhitespaceOnlySetter(
+        string $value,
+        bool $allowWhitespaceOnly,
+        bool $expected,
+    ): void {
+        $validator = new RequiredFields(['TestField']);
+        $validator->setAllowWhitespaceOnly($allowWhitespaceOnly);
+        $this->assertSame($allowWhitespaceOnly, $validator->getAllowWhitespaceOnly());
+        $field = new TextField('TestField');
+        $field->setValue($value);
+        $form = new Form(null, null, new FieldList([$field]), null, $validator);
+        $result = $validator->validate($form);
+        $this->assertEquals($expected, $result->isValid());
+        // assert that global config makes no difference
+        RequiredFields::config()->set('allow_whitespace_only', true);
+        $result = $validator->validate($form);
+        $this->assertEquals($expected, $result->isValid());
+        RequiredFields::config()->set('allow_whitespace_only', false);
+        $result = $validator->validate($form);
+        $this->assertEquals($expected, $result->isValid());
     }
 }

@@ -19,7 +19,7 @@ class ModuleResourceLoader implements TemplateGlobalProvider
      * For other files, return original value
      *
      * @param string $resource
-     * @return string
+     * @return string|null
      */
     public function resolvePath($resource)
     {
@@ -38,7 +38,7 @@ class ModuleResourceLoader implements TemplateGlobalProvider
      * Resolves resource specifier to the given url.
      *
      * @param string $resource
-     * @return string
+     * @return string|null
      */
     public function resolveURL($resource)
     {
@@ -51,7 +51,6 @@ class ModuleResourceLoader implements TemplateGlobalProvider
         $resource = $this->resolveResource($resource);
 
         // Resolve resource to url
-        /** @var ResourceURLGenerator $generator */
         $generator = Injector::inst()->get(ResourceURLGenerator::class);
         return $generator->urlForResource($resource);
     }
@@ -60,7 +59,7 @@ class ModuleResourceLoader implements TemplateGlobalProvider
      * Template wrapper for resolvePath
      *
      * @param string $resource
-     * @return string
+     * @return string|null
      */
     public static function resourcePath($resource)
     {
@@ -71,7 +70,7 @@ class ModuleResourceLoader implements TemplateGlobalProvider
      * Template wrapper for resolveURL
      *
      * @param string $resource
-     * @return string
+     * @return string|null
      */
     public static function resourceURL($resource)
     {

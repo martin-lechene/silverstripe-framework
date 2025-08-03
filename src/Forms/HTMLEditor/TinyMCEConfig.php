@@ -9,6 +9,7 @@ use SilverStripe\Control\Director;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Core\Manifest\ModuleResource;
 use SilverStripe\Core\Manifest\ModuleResourceLoader;
+use SilverStripe\Dev\Deprecation;
 use SilverStripe\i18n\i18n;
 use SilverStripe\i18n\i18nEntityProvider;
 use SilverStripe\View\Requirements;
@@ -17,6 +18,7 @@ use SilverStripe\View\ThemeResourceLoader;
 
 /**
  * Default configuration for HtmlEditor specific to tinymce
+ * @deprecated 5.4.0 Will be replaced with SilverStripe\TinyMCE\TinyMCEConfig in a future major release
  */
 class TinyMCEConfig extends HTMLEditorConfig implements i18nEntityProvider
 {
@@ -250,13 +252,11 @@ class TinyMCEConfig extends HTMLEditorConfig implements i18nEntityProvider
     private static $image_size_presets = [ ];
 
     /**
-     * TinyMCE JS settings
+     * Default TinyMCE JS options which apply to all new configurations.
      *
      * @link https://www.tiny.cloud/docs/tinymce/6/tinydrive-getting-started/#configure-the-required-tinymce-options
-     *
-     * @var array
      */
-    protected $settings = [
+    private static array $default_options = [
         'fix_list_elements' => true, // https://www.tiny.cloud/docs/tinymce/6/content-filtering/#fix_list_elements
         'formats' => [
             'alignleft' => [
@@ -311,7 +311,24 @@ class TinyMCEConfig extends HTMLEditorConfig implements i18nEntityProvider
         'promotion' => false,
         'upload_folder_id' => null, // Set folder ID for insert media dialog
         'link_default_target' => '_blank', // https://www.tiny.cloud/docs/tinymce/6/autolink/#example-using-link_default_target
+        // Default set of valid_elements which apply for all new configurations
+        'valid_elements' => "@[id|class|style|title],a[id|rel|rev|dir|tabindex|accesskey|type|name|href|target|title"
+        . "|class],-strong/-b[class],-em/-i[class],-strike[class],-u[class],#p[id|dir|class|align|style],-ol[class],"
+        . "-ul[class],-li[class],br,img[id|dir|longdesc|usemap|class|src|border|alt=|title|hspace|vspace|width|height|align|name|data*],"
+        . "-sub[class],-sup[class],-blockquote[dir|class],-cite[dir|class|id|title],"
+        . "-table[cellspacing|cellpadding|width|height|class|align|summary|dir|id|style],"
+        . "-tr[id|dir|class|rowspan|width|height|align|valign|bgcolor|background|bordercolor|style],"
+        . "tbody[id|class|style],thead[id|class|style],tfoot[id|class|style],"
+        . "#td[id|dir|class|colspan|rowspan|width|height|align|valign|scope|style],"
+        . "-th[id|dir|class|colspan|rowspan|width|height|align|valign|scope|style],caption[id|dir|class],"
+        . "-div[id|dir|class|align|style],-span[class|align|style],-pre[class|align],address[class|align],"
+        . "-h1[id|dir|class|align|style],-h2[id|dir|class|align|style],-h3[id|dir|class|align|style],"
+        . "-h4[id|dir|class|align|style],-h5[id|dir|class|align|style],-h6[id|dir|class|align|style],hr[class],"
+        . "dd[id|class|title|dir],dl[id|class|title|dir],dt[id|class|title|dir],",
+        'convert_unsafe_embeds' => true, // SS-2024-001
     ];
+
+    protected $settings = [];
 
     /**
      * Holder list of enabled plugins
@@ -336,6 +353,16 @@ class TinyMCEConfig extends HTMLEditorConfig implements i18nEntityProvider
      * @var string
      */
     protected $theme = 'silver';
+
+    public function __construct()
+    {
+        Deprecation::noticeWithNoReplacment(
+            '5.4.0',
+            'Will be replaced with SilverStripe\TinyMCE\TinyMCEConfig in a future major release',
+            Deprecation::SCOPE_CLASS
+        );
+        $this->settings = static::config()->get('default_options');
+    }
 
     /**
      * Get the theme
@@ -721,7 +748,7 @@ class TinyMCEConfig extends HTMLEditorConfig implements i18nEntityProvider
     private function initImageSizePresets(array &$settings): void
     {
         if (empty($settings['image_size_presets'])) {
-            $settings['image_size_presets'] = self::config()->get('image_size_presets');
+            $settings['image_size_presets'] = static::config()->get('image_size_presets');
         }
 
         foreach ($settings['image_size_presets'] as &$preset) {
@@ -730,13 +757,14 @@ class TinyMCEConfig extends HTMLEditorConfig implements i18nEntityProvider
             }
 
             if (isset($preset['i18n'])) {
+                /** @phpstan-ignore translation.key (we need the key to be dynamic here) */
                 $preset['text'] = _t(
                     $preset['i18n'],
                     isset($preset['text']) ? $preset['text'] : ''
                 );
             } elseif (empty($preset['text']) && isset($preset['width'])) {
                 $preset['text'] = _t(
-                    self::class . '.PIXEL_WIDTH',
+                    TinyMCEConfig::class . '.PIXEL_WIDTH',
                     '{width} pixels',
                     $preset
                 );
@@ -819,7 +847,6 @@ class TinyMCEConfig extends HTMLEditorConfig implements i18nEntityProvider
      */
     public function getScriptURL()
     {
-        /** @var TinyMCEScriptGenerator $generator */
         $generator = Injector::inst()->get(TinyMCEScriptGenerator::class);
         return $generator->getScriptURL($this);
     }
@@ -927,7 +954,7 @@ class TinyMCEConfig extends HTMLEditorConfig implements i18nEntityProvider
      * @param string $folderName
      * @return $this
      */
-    public function setFolderName(string $folderName): self
+    public function setFolderName(string $folderName): TinyMCEConfig
     {
         $folder = Folder::find_or_make($folderName);
         $folderID = $folder ? $folder->ID : null;
@@ -938,9 +965,9 @@ class TinyMCEConfig extends HTMLEditorConfig implements i18nEntityProvider
     public function provideI18nEntities()
     {
         $entities = [
-            self::class . '.PIXEL_WIDTH' => '{width} pixels',
+            TinyMCEConfig::class . '.PIXEL_WIDTH' => '{width} pixels',
         ];
-        foreach (self::config()->get('image_size_presets') as $preset) {
+        foreach (static::config()->get('image_size_presets') as $preset) {
             if (empty($preset['i18n']) || empty($preset['text'])) {
                 continue;
             }

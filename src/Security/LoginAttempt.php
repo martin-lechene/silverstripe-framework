@@ -20,7 +20,7 @@ use SilverStripe\ORM\DataObject;
  * @property string $IP IP address of user attempting to login
  * @property int $MemberID ID of the Member
  *
- * @method Member Member() Member object of the user trying to log in
+ * @method Member Member()
  */
 class LoginAttempt extends DataObject
 {
@@ -81,7 +81,7 @@ class LoginAttempt extends DataObject
      * Get all login attempts for the given email address
      *
      * @param string $email
-     * @return DataList|LoginAttempt[]
+     * @return DataList<LoginAttempt>
      */
     public static function getByEmail($email)
     {

@@ -34,7 +34,7 @@ class Path
         $fullPath = static::normalise(implode(DIRECTORY_SEPARATOR, $parts));
 
         // Protect against directory traversal vulnerability (OTG-AUTHZ-001)
-        if (strpos($fullPath ?? '', '..') !== false) {
+        if ($fullPath === '..' || str_ends_with($fullPath, '/..') || str_contains($fullPath, '../')) {
             throw new InvalidArgumentException('Can not collapse relative folders');
         }
 
@@ -53,9 +53,9 @@ class Path
     {
         $path = trim(Convert::slashes($path) ?? '');
         if ($relative) {
-            return trim($path ?? '', self::TRIM_CHARS ?? '');
+            return trim($path ?? '', Path::TRIM_CHARS ?? '');
         } else {
-            return rtrim($path ?? '', self::TRIM_CHARS ?? '');
+            return rtrim($path ?? '', Path::TRIM_CHARS ?? '');
         }
     }
 }

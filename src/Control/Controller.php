@@ -9,6 +9,7 @@ use SilverStripe\Security\Member;
 use SilverStripe\Security\Security;
 use SilverStripe\View\SSViewer;
 use SilverStripe\View\TemplateGlobalProvider;
+use SilverStripe\Dev\Deprecation;
 
 /**
  * Controllers are the cornerstone of all site functionality in SilverStripe. The {@link Director}
@@ -19,7 +20,6 @@ use SilverStripe\View\TemplateGlobalProvider;
  */
 class Controller extends RequestHandler implements TemplateGlobalProvider
 {
-
     /**
      * An array of arguments extracted from the URL.
      *
@@ -521,6 +521,7 @@ class Controller extends RequestHandler implements TemplateGlobalProvider
         if (Controller::$controller_stack) {
             return Controller::$controller_stack[0];
         }
+        // This user_error() will be removed in the next major version of Silverstripe CMS
         user_error("No current controller available", E_USER_WARNING);
         return null;
     }
@@ -530,9 +531,11 @@ class Controller extends RequestHandler implements TemplateGlobalProvider
      * controller in the stack.
      *
      * @return bool
+     * @deprecated 5.4.0 Will be removed without equivalent functionality to replace it in a future major release
      */
     public static function has_curr()
     {
+        Deprecation::noticeWithNoReplacment('5.4.0');
         return Controller::$controller_stack ? true : false;
     }
 
@@ -573,7 +576,7 @@ class Controller extends RequestHandler implements TemplateGlobalProvider
     {
         // Ensure this controller has a valid session
         $this->getRequest()->getSession();
-        array_unshift(self::$controller_stack, $this);
+        array_unshift(Controller::$controller_stack, $this);
     }
 
     /**
@@ -581,8 +584,8 @@ class Controller extends RequestHandler implements TemplateGlobalProvider
      */
     public function popCurrent()
     {
-        if ($this === self::$controller_stack[0]) {
-            array_shift(self::$controller_stack);
+        if ($this === Controller::$controller_stack[0]) {
+            array_shift(Controller::$controller_stack);
         } else {
             $class = static::class;
             user_error(
@@ -680,6 +683,18 @@ class Controller extends RequestHandler implements TemplateGlobalProvider
      */
     public static function normaliseTrailingSlash(string $url): string
     {
+        // Do not normalise external urls
+        // Note that urls without a scheme such as "www.example.com" will be counted as a relative file
+        if (!Director::is_site_url($url)) {
+            return $url;
+        }
+
+        // Do not modify files
+        $extension = pathinfo(Director::makeRelative($url), PATHINFO_EXTENSION);
+        if ($extension) {
+            return $url;
+        }
+
         $querystring = null;
         $fragmentIdentifier = null;
 
@@ -693,15 +708,10 @@ class Controller extends RequestHandler implements TemplateGlobalProvider
         }
 
         // Normlise trailing slash
-        $shouldHaveTrailingSlash = self::config()->uninherited('add_trailing_slash');
-        if ($shouldHaveTrailingSlash
-            && !str_ends_with($url, '/')
-            && !preg_match('/^(.*)\.([^\/]*)$/', Director::makeRelative($url))
-        ) {
-            // Add trailing slash if enabled and url does not end with a file extension
+        $shouldHaveTrailingSlash = Controller::config()->uninherited('add_trailing_slash');
+        if ($shouldHaveTrailingSlash && !str_ends_with($url, '/')) {
             $url .= '/';
         } elseif (!$shouldHaveTrailingSlash) {
-            // Remove trailing slash if it shouldn't be there
             $url = rtrim($url, '/');
         }
 

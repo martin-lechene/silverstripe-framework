@@ -14,7 +14,8 @@ class DBDatetimeTest extends SapphireTest
     protected function setUp(): void
     {
         parent::setUp();
-        i18n::set_locale('en_NZ');
+        // Set to an explicit locale so project-level locale swapping doesn't affect tests
+        i18n::set_locale('en_US');
     }
 
     public function testNowWithSystemDate()
@@ -126,23 +127,23 @@ class DBDatetimeTest extends SapphireTest
         $date = DBDatetime::create_field('Datetime', '2001-12-11 22:10:59');
 
         // note: Some localisation packages exclude the ',' in default medium format
-        i18n::set_locale('en_NZ');
-        $this->assertMatchesRegularExpression('#11/12/2001(,)? 10:10 PM#i', $date->Nice());
+        i18n::set_locale('de_DE');
+        $this->assertMatchesRegularExpression('#11.12.2001(,)? 22:10#i', $date->Nice());
 
         i18n::set_locale('en_US');
-        $this->assertMatchesRegularExpression('#Dec 11(,)? 2001(,)? 10:10 PM#i', $date->Nice());
+        $this->assertMatchesRegularExpression('#Dec 11(,)? 2001(,)? 10:10\hPM#iu', $date->Nice());
     }
 
     public function testDate()
     {
         $date = DBDatetime::create_field('Datetime', '2001-12-31 22:10:59');
-        $this->assertEquals('31/12/2001', $date->Date());
+        $this->assertEquals('Dec 31, 2001', $date->Date());
     }
 
     public function testTime()
     {
         $date = DBDatetime::create_field('Datetime', '2001-12-31 22:10:59');
-        $this->assertMatchesRegularExpression('#10:10:59 PM#i', $date->Time());
+        $this->assertMatchesRegularExpression('#10:10:59\hPM#iu', $date->Time());
     }
 
     public function testTime24()
@@ -301,5 +302,51 @@ class DBDatetimeTest extends SapphireTest
             ['+59 seconds', '2019-03-03 12:00:59'],
             ['-59 seconds', '2019-03-03 11:59:01'],
         ];
+    }
+
+    public function provideGetTimeBetween(): array
+    {
+        return [
+            'no time between' => [
+                'timeBefore' => '2019-03-03 12:00:00',
+                'timeAfter' => '2019-03-03 12:00:00',
+                'expected' => '0 seconds',
+            ],
+            'one second between' => [
+                'timeBefore' => '2019-03-03 12:00:00',
+                'timeAfter' => '2019-03-03 12:00:01',
+                'expected' => 'one second',
+            ],
+            'some seconds between' => [
+                'timeBefore' => '2019-03-03 12:00:00',
+                'timeAfter' => '2019-03-03 12:00:15',
+                'expected' => '15 seconds',
+            ],
+            'days and minutes between' => [
+                'timeBefore' => '2019-03-03 12:00:00',
+                'timeAfter' => '2019-03-15 12:05:00',
+                'expected' => '12 days, 5 minutes',
+            ],
+            'years, months, and hours between' => [
+                'timeBefore' => '2019-03-03 12:00:00',
+                'timeAfter' => '2028-01-03 17:00:00',
+                'expected' => '8 years, 10 months, 5 hours',
+            ],
+            'backwards in time doesnt say "negative" or "-"' => [
+                'timeBefore' => '2019-03-03 12:00:00',
+                'timeAfter' => '2018-01-06 12:01:12',
+                'expected' => 'one year, one month, 27 days, 23 hours, 58 minutes, 48 seconds',
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideGetTimeBetween
+     */
+    public function testGetTimeBetween(string $timeBefore, string $timeAfter, string $expected): void
+    {
+        $before = (new DBDateTime())->setValue($timeBefore);
+        $after = (new DBDateTime())->setValue($timeAfter);
+        $this->assertSame($expected, DBDatetime::getTimeBetween($before, $after));
     }
 }

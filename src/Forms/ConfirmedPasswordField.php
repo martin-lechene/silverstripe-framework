@@ -5,6 +5,7 @@ namespace SilverStripe\Forms;
 use LogicException;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DataObjectInterface;
+use SilverStripe\ORM\FieldType\DBField;
 use SilverStripe\Security\Authenticator;
 use SilverStripe\Security\Security;
 use SilverStripe\View\HTML;
@@ -47,7 +48,7 @@ class ConfirmedPasswordField extends FormField
     /**
      * Allow empty fields when entering the password for the first time
      * If this is set to true then a random password may be generated if the field is empty
-     * depending on the value of $self::generateRandomPasswordOnEmtpy
+     * depending on the value of $ConfirmedPasswordField::generateRandomPasswordOnEmtpy
      *
      * @var boolean
      */
@@ -168,7 +169,6 @@ class ConfirmedPasswordField extends FormField
 
         // disable auto complete
         foreach ($this->getChildren() as $child) {
-            /** @var FormField $child */
             $child->setAttribute('autocomplete', 'off');
         }
 
@@ -200,7 +200,6 @@ class ConfirmedPasswordField extends FormField
         // Build inner content
         $fieldContent = '';
         foreach ($this->getChildren() as $field) {
-            /** @var FormField $field */
             $field->setDisabled($this->isDisabled());
             $field->setReadonly($this->isReadonly());
 
@@ -210,7 +209,7 @@ class ConfirmedPasswordField extends FormField
                 }
             }
 
-            $fieldContent .= $field->FieldHolder();
+            $fieldContent .= $field->FieldHolder(['AttributesHTML' => $this->getAttributesHTMLForChild($field)]);
         }
 
         if (!$this->showOnClick) {
@@ -241,6 +240,19 @@ class ConfirmedPasswordField extends FormField
             ['class' => 'showOnClick'],
             $actionLink . "\n" . $container
         );
+    }
+
+    public function Required()
+    {
+        return !$this->canBeEmpty || parent::Required();
+    }
+
+    public function setForm($form)
+    {
+        foreach ($this->getChildren() as $field) {
+            $field->setForm($form);
+        }
+        return parent::setForm($form);
     }
 
     /**
@@ -321,7 +333,6 @@ class ConfirmedPasswordField extends FormField
     public function setRightTitle($title)
     {
         foreach ($this->getChildren() as $field) {
-            /** @var FormField $field */
             $field->setRightTitle($title);
         }
 
@@ -343,7 +354,6 @@ class ConfirmedPasswordField extends FormField
         if (is_array($titles) && count($titles ?? []) === $expectedChildren) {
             foreach ($this->getChildren() as $field) {
                 if (isset($titles[0])) {
-                    /** @var FormField $field */
                     $field->setTitle($titles[0]);
 
                     array_shift($titles);
@@ -613,7 +623,6 @@ class ConfirmedPasswordField extends FormField
      */
     public function performReadonlyTransformation()
     {
-        /** @var ReadonlyField $field */
         $field = $this->castedCopy(ReadonlyField::class)
             ->setTitle($this->title ? $this->title : _t('SilverStripe\\Security\\Member.PASSWORD', 'Password'))
             ->setValue('*****');
@@ -749,5 +758,19 @@ class ConfirmedPasswordField extends FormField
             $rightTitle = $text . ' ' . $rightTitle;
         }
         $this->passwordField->setRightTitle($rightTitle ?: null);
+    }
+
+    /**
+     * Get the AttributesHTML for a child field.
+     * Includes extra information the child isn't aware of on its own, such as whether
+     * it's required due to this field as a whole being required.
+     */
+    private function getAttributesHTMLForChild(FormField $child): DBField
+    {
+        $attributes = $child->getAttributesHTML();
+        if (strpos($attributes, 'required="required"') === false && $this->Required()) {
+            $attributes .= ' required="required" aria-required="true"';
+        }
+        return DBField::create_field('HTMLFragment', $attributes);
     }
 }

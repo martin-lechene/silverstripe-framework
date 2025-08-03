@@ -407,7 +407,7 @@ class SQLSelect extends SQLConditionalExpression
      */
     private function getDirectionFromString($value, $defaultDirection = null)
     {
-        if (preg_match('/^(.*)(asc|desc)$/i', $value ?? '', $matches)) {
+        if (preg_match('/^(.*) (asc|desc)$/i', $value ?? '', $matches)) {
             $column = trim($matches[1] ?? '');
             $direction = strtoupper($matches[2] ?? '');
         } else {
@@ -560,7 +560,7 @@ class SQLSelect extends SQLConditionalExpression
      */
     public function addUnion(SQLSelect $query, ?string $type = null): static
     {
-        if ($type && $type !== self::UNION_ALL && $type !== self::UNION_DISTINCT) {
+        if ($type && $type !== SQLSelect::UNION_ALL && $type !== SQLSelect::UNION_DISTINCT) {
             throw new LogicException('Union $type must be one of the constants UNION_ALL or UNION_DISTINCT.');
         }
 

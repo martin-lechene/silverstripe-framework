@@ -8,16 +8,14 @@ nl:
     REMOVE: Verwijder
   SilverStripe\Control\ChangePasswordEmail_ss:
     CHANGEPASSWORDFOREMAIL: 'Het wachtwoord voor het account met e-mailadres {email} is zojuist aangepast. Heb je geen wachtwoord aangepast, gebruik van onderstaande knop om uit veiligheidsoverwegingen je wachtwoord opnieuw in te stellen.'
-    CHANGEPASSWORDTEXT1: 'U heeft het wachtwoord veranderd voor'
+    CHANGEPASSWORDTEXT1: 'Je hebt het wachtwoord veranderd voor'
     CHANGEPASSWORDTEXT3: 'Wachtwoord opnieuw instellen'
     HELLO: Hallo
   SilverStripe\Control\Email\ForgotPasswordEmail_ss:
     HELLO: Hallo
     TEXT1: 'Je hebt aangegeven je wachtwoord te zijn vergeten. Klik op de knop '
-    TEXT2: 'herstel wachtwoord'
+    TEXT2: 'reset wachtwoord'
     TEXT3: ', om je wachtwoord opnieuw in te stellen voor '
-  SilverStripe\Control\Middleware\ConfirmationMiddleware\GetParameter:
-    CONFIRMATION_NAME: '"{key}" GET parameter'
   SilverStripe\Control\Middleware\ConfirmationMiddleware\Url:
     CONFIRMATION_DESCRIPTION: 'De URL is: "{url}"'
     CONFIRMATION_NAME: 'URL is afgeschermd'
@@ -27,9 +25,32 @@ nl:
   SilverStripe\Control\RequestProcessor:
     INVALID_REQUEST: 'Fout bij verwerken'
     REQUEST_ABORTED: 'Fout bij verwerken (geannuleerd)'
+  SilverStripe\Dev\BulkLoader:
+    CANNOT_CREATE: "Niet toegestaan om '{type}' items aan te maken"
+    CANNOT_DELETE: "Niet toegestaan om '{type}' items te verwijderen"
+    CANNOT_EDIT: "Niet toegestaan om '{type}' items te bewerken"
+  SilverStripe\Dev\Command\ConfigDump:
+    CAN_DEV_CONFIG_DESCRIPTION: 'Mag /dev/config bekijken'
+    CAN_DEV_CONFIG_HELP: 'Mag alle applicatie configuratie variabelen bekijken (/dev/config)'
+  SilverStripe\Dev\Command\DbBuild:
+    CAN_DEV_BUILD_DESCRIPTION: 'Mag dev/build uitvoeren'
+    CAN_DEV_BUILD_HELP: 'Mag het build-commando uitvoeren (/dev/build)'
+  SilverStripe\Dev\DevBuildController:
+    CAN_DEV_BUILD_DESCRIPTION: 'Mag dev/build uitvoeren'
+    CAN_DEV_BUILD_HELP: 'Mag het build-commando uitvoeren (/dev/build)'
+  SilverStripe\Dev\DevConfigController:
+    CAN_DEV_CONFIG_DESCRIPTION: 'Mag /dev/config bekijken'
+    CAN_DEV_CONFIG_HELP: 'Mag alle applicatie configuratie variabelen bekijken (/dev/config)'
   SilverStripe\Dev\DevConfirmationController:
     INFO_DESCRIPTION: 'Bevestig het uitvoeren van mogelijk gevaarlijke taak'
     INFO_TITLE: Beveiligingswaarschuwing
+  SilverStripe\Dev\DevelopmentAdmin:
+    ALL_DEV_ADMIN_DESCRIPTION: 'Mag alle /dev-endpoints bekijken en uitvoeren'
+    ALL_DEV_ADMIN_HELP: 'Mag alle /dev-endpoints bekijken en uitvoeren'
+    PERMISSIONS_CATEGORY: 'Dev toestemmingen'
+  SilverStripe\Dev\TaskRunner:
+    BUILDTASK_CAN_RUN_DESCRIPTION: 'Mag alle /dev/tasks bekijken en uitvoeren'
+    BUILDTASK_CAN_RUN_HELP: 'Mag alle build-taken bekijken en uitvoeren (/dev/tasks). Dit kan per taak nog overschreven zijn voor specifieke view-instellingen'
   SilverStripe\Forms\CheckboxField:
     NOANSWER: Nee
     YESANSWER: Ja
@@ -38,10 +59,11 @@ nl:
   SilverStripe\Forms\ConfirmedPasswordField:
     ATLEAST: 'Een wachtwoord moet tenminste {min} karakters hebben.'
     BETWEEN: 'Een wachtwoord moet tussen de {min} en {max} karakters hebben'
-    CURRENT_PASSWORD_ERROR: 'Het wachtwoord dat u heeft ingevoerd is niet juist.'
+    CURRENT_PASSWORD_ERROR: 'Het wachtwoord dat je ingevoerd hebt is onjuist.'
     CURRENT_PASSWORD_MISSING: 'Voer je huidige wachtwoord in.'
     LOGGED_IN_ERROR: 'Je moet ingelogd zijn om je wachtwoord te kunnen veranderen!'
     MAXIMUM: 'Een wachtwoord mag maximaal {max} karakters hebben.'
+    RANDOM_IF_EMPTY: 'Als je dit veld leeg laat, wordt er automatisch een willekeurig wachtwoord gegenereerd.'
     SHOWONCLICKTITLE: 'Verander wachtwoord'
   SilverStripe\Forms\DateField:
     NOTSET: 'niet ingesteld'
@@ -69,7 +91,6 @@ nl:
     VALIDATIONPASSWORDSDONTMATCH: 'Wachtwoorden komen niet overeen'
     VALIDATIONPASSWORDSNOTEMPTY: 'Wachtwoorden mogen niet leeg zijn'
     VALIDATIONSTRONGPASSWORD: 'Wachtwoorden moeten bestaan uit minstens één cijfer en één alfanumeriek karakter.'
-    VALIDATOR: Validator
     VALIDCURRENCY: 'Vul een geldige munteenheid in'
   SilverStripe\Forms\FormField:
     EXAMPLE: 'bijv. {format}'
@@ -80,7 +101,6 @@ nl:
     Add: '{name} toevoegen'
     CSVEXPORT: 'Exporteer naar CSV'
     CSVIMPORT: 'CSV importeren'
-    Filter: Filter
     FilterBy: Filteren
     Find: Zoeken
     LinkExisting: 'Koppel een bestaand item'
@@ -104,7 +124,7 @@ nl:
     Create: Aanmaken
     Delete: Verwijderen
     DeletePermissionsFailure: 'Onvoldoende rechten om te verwijderen'
-    Deleted: '{type} {name} verwijderd'
+    Deleted: '{type} "{name}" verwijderd'
     Save: Opslaan
     Saved: '{name} {link} opgeslagen'
   SilverStripe\Forms\GridField\GridFieldDetailForm_ItemRequest:
@@ -112,14 +132,16 @@ nl:
     NEW: 'Nieuwe item toevoegen'
     NEXT: 'Naar volgende item'
     PREVIOUS: 'Naar vorige item'
+    SAVETOASTMESSAGE: '{type} "{name}" is opgeslagen'
     ViewPermissionsFailure: 'Onvoldoende rechten om "{ObjectTitle}" te bekijken'
   SilverStripe\Forms\GridField\GridFieldEditButton:
     EDIT: Bewerken
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search: 'Zoek naar "{name}"'
     SearchFormFaliure: 'Er kon geen zoekformulier worden aangemaakt'
+    Search_Default: Zoek
   SilverStripe\Forms\GridField\GridFieldGroupDeleteAction:
-    UnlinkSelfFailure: 'U kunt uzelf niet verwijderen van deze groep, omdat u dan geen admin-rechten meer heeft.'
+    UnlinkSelfFailure: 'Je kan jezelf niet verwijderen van deze groep, omdat je dan geen admin-rechten meer hebt.'
   SilverStripe\Forms\GridField\GridFieldPaginator:
     OF: van
     Page: Pagina
@@ -129,7 +151,6 @@ nl:
   SilverStripe\Forms\HTMLEditor\TinyMCEConfig:
     BEST_FIT: 'Beste pasvorm'
     ORIGINAL: Origineel
-    PIXEL_WIDTH: '{width} pixels'
   SilverStripe\Forms\MoneyField:
     FIELDLABELAMOUNT: Aantal
     FIELDLABELCURRENCY: Munteenheid
@@ -139,13 +160,24 @@ nl:
   SilverStripe\Forms\NullableField:
     IsNullLabel: 'Is null'
   SilverStripe\Forms\NumericField:
-    VALIDATION: '''{value}'' is geen getal, enkel getallen worden door dit veld geaccepteerd'
+    VALIDATION: "'{value}' is geen getal, enkel getallen worden door dit veld geaccepteerd"
+  SilverStripe\Forms\SearchableDropdownTrait:
+    SELECT: Selecteer...
+    SELECT_OR_TYPE_TO_SEARCH: 'Selecteer of type om te zoeken...'
+    TYPE_TO_SEARCH: 'Type om te zoeken...'
   SilverStripe\Forms\TextField:
     VALIDATEMAXLENGTH: 'De waarde voor {name} mag niet langer zijn dan {maxLength} tekens.'
   SilverStripe\Forms\TimeField:
     VALIDATEFORMAT: 'Vul een geldig datumformaat in ({format})'
+  SilverStripe\Forms\UrlField:
+    INVALID: 'Vul een geldige URL in'
   SilverStripe\ORM\DataObject:
+    FILTER_WITHINRANGE_FROM: Afzender
+    FILTER_WITHINRANGE_TO: Tot
     GENERALSEARCH: 'Alles doorzoeken'
+    NO_DUPLICATE: 'Kan {type} niet dupliceren'
+    NO_DUPLICATE_MULTI_FIELD: 'Kan {type} niet dupliceren - ten minste één van de volgende velden moet aangepast worden: {fields}'
+    NO_DUPLICATE_SINGLE_FIELD: 'Kan geen kopie aanmaken van {type} wanneer "{field}" ingesteld is op "{value}"'
     PLURALNAME: 'Data objecten'
     PLURALS:
       one: 'Data object'
@@ -175,10 +207,28 @@ nl:
       one: '{count} seconde'
       other: '{count} seconden'
     TIMEDIFFAGO: '{difference} geleden'
-    TIMEDIFFIN: 'in {difference}'
     YEARS_SHORT_PLURALS:
       one: '{count} jaar'
       other: '{count} jaren'
+  SilverStripe\ORM\FieldType\DBDatetime:
+    nDays:
+      one: 'één dag'
+      other: '{count} dagen'
+    nHours:
+      one: 'één uur'
+      other: '{count} uren'
+    nMinutes:
+      one: 'één minuut'
+      other: '{count} minuten'
+    nMonths:
+      one: 'één maand'
+      other: '{count} maanden'
+    nSeconds:
+      one: 'één seconde'
+      other: '{count} seconden'
+    nYears:
+      one: 'één jaar'
+      other: '{count} jaar'
   SilverStripe\ORM\FieldType\DBEnum:
     ANY: Elke
   SilverStripe\ORM\FieldType\DBForeignKey:
@@ -190,6 +240,8 @@ nl:
   SilverStripe\ORM\Hierarchy\Hierarchy:
     InfiniteLoopNotAllowed: 'Oneindige lus gevonden in "{type}" hiërarchie. Wijzig het hogere niveau om dit op te lossen'
     LIMITED_TITLE: 'Teveel onderliggende items ({count})'
+  SilverStripe\ORM\Search\SearchContextForm:
+    OpenFilter: 'Zoeken en filteren openen'
   SilverStripe\ORM\ValidationException:
     DEFAULT_ERROR: Validatiefout
   SilverStripe\Security\BasicAuth:
@@ -221,7 +273,7 @@ nl:
     Description: 'Omschrijving '
     GROUPNAME: 'Groep naam'
     GroupReminder: 'Als u de bovenliggende groep selecteert, neemt deze groep alle rollen over'
-    HierarchyPermsError: 'U moet (ADMIN) rechten hebben om de bovenliggende groep "{group}" toe te kennen'
+    HierarchyPermsError: 'Je moet (ADMIN) rechten hebben om de bovenliggende groep "{group}" toe te kennen'
     Locked: 'Gesloten?'
     MEMBERS: Leden
     NEWGROUP: 'Nieuwe groep'
@@ -239,22 +291,25 @@ nl:
     Sort: Sorteer-richting
     ValidationIdentifierAlreadyExists: 'Er bestaat al een groep ({group}) met eenzelfde {identifier}'
     db_AccessAllSubsites: 'Toegang tot alle subsites'
-    db_Code: Code
-    db_DN: DN
     db_Description: Omschrijving
-    db_GUID: GUID
     db_HtmlEditorConfig: 'HTML editor config'
     db_LastSynced: 'Laatst gesynchroniseerd'
     db_Locked: Vergrendeld
     db_Sort: Volgorde
     db_Title: Titel
     has_many_Groups: Groepen
-    has_many_LDAPGroupMappings: 'LDAP group mappings'
     has_many_Permissions: Rechten
     has_one_Parent: Bovenliggende
     many_many_Members: Leden
     many_many_Roles: Rollen
-    many_many_Subsites: Subsites
+    many_many_SiteTreeContentReview: 'Sitetree content review'
+  SilverStripe\Security\InheritedPermissionsExtension:
+    db_CanEditType: 'Kan bewerken type'
+    db_CanViewType: 'Kan bekijken type'
+    many_many_EditorGroups: Redacteursgroepen
+    many_many_EditorMembers: Redacteurs
+    many_many_ViewerGroups: Bekijkersgroepen
+    many_many_ViewerMembers: Bekijk-gebruikers
   SilverStripe\Security\LoginAttempt:
     Email: 'E-mailadres '
     EmailHashed: 'E-mailadres (versleuteld)'
@@ -264,9 +319,7 @@ nl:
       one: 'Een inlogpoging'
       other: '{count} inlogpogingen'
     SINGULARNAME: Inlogpogingen
-    Status: Status
-    db_IP: IP
-    db_Status: Status
+    db_EmailHashed: 'Gehasde mailadres'
     has_one_Member: Lid
   SilverStripe\Security\Member:
     ADDGROUP: 'Groep toevoegen'
@@ -280,6 +333,7 @@ nl:
     CURRENT_PASSWORD: 'Huidige wachtwoord'
     EDIT_PASSWORD: 'Nieuw wachtwoord'
     EMAIL: E-mail
+    EMAIL_FAILED: 'Er is een fout opgetreden bij het versturen van de wachtwoord-reset e-mail.'
     EMPTYNEWPASSWORD: 'Het nieuwe wachtwoord mag niet leeg zijn, probeer opnieuw'
     ENTEREMAIL: 'Typ je e-mailadres om een link te ontvangen, waarmee je je wachtwoord opnieuw kan instellen.'
     ERRORLOCKEDOUT2: 'Uw account is tijdelijk uitgeschakeld als gevolg van te veel mislukte pogingen om in te loggen. Probeer het over {count} minuten opnieuw.'
@@ -290,7 +344,7 @@ nl:
     INTERFACELANG: 'Interface taal'
     KEEP_ME_SIGNED_IN: 'Ingelogd blijven gedurende {count} dagen'
     KEEP_ME_SIGNED_IN_TOOLTIP: 'Onthoud gedurende {count} dagen de inloggegevens op dit apparaat. Gebruik dit alleen op vertrouwde apparaten.'
-    LOGGEDINAS: 'U bent ingelogd als {name}.'
+    LOGGEDINAS: 'Je bent ingelogd als {name}.'
     NEWPASSWORD: 'Nieuw wachtwoord'
     PASSWORD: Wachtwoord
     PASSWORDEXPIRED: 'Je wachtwoord is verlopen. Kies een nieuw wachtwoord.'
@@ -301,25 +355,27 @@ nl:
     RequiresPasswordChangeOnNextLogin: 'Vereist wachtwoordwijziging bij volgende aanmelding'
     SINGULARNAME: Lid
     SUBJECTPASSWORDCHANGED: 'Je wachtwoord is aangepast'
-    SUBJECTPASSWORDRESET: 'Je wachtwoord opnieuw instellen'
+    SUBJECTPASSWORDRESET: 'Wachtwoord opnieuw instellen'
     SURNAME: Achternaam
     VALIDATIONADMINLOSTACCESS: 'Niet mogelijk om alle admin-groepen te verwijderen van je profiel'
     VALIDATIONMEMBEREXISTS: 'Er bestaat al een gebruiker met dezelfde {identifier}'
     ValidationIdentifierFailed: 'Een bestaande gebruiker #{id} kan niet dezelfde unieke velden hebben ({name} = {value}))'
     WELCOMEBACK: 'Welkom terug, {firstname}'
     YOUROLDPASSWORD: 'Je oude wachtwoord'
+    belongs_many_many_BlogPosts: 'Blog Artikelen'
     belongs_many_many_Groups: Groepen
     db_AccountResetExpired: 'Het opnieuw instellen van het account is verlopen'
+    db_BlogProfileSummary: 'Blogprofiel samenvatting'
     db_Email: E-mail
     db_FirstName: Voornaam
-    db_GUID: GUID
     db_LastSynced: 'Laatst gesynchroniseerd'
     db_Locale: 'Interface taal'
     db_LockedOutUntil: 'Gesloten tot'
     db_Password: Wachtwoord
     db_PasswordExpiry: 'Wachtwoord vervaldatum'
     db_Surname: Achternaam
-    db_URLSegment: 'URL segment'
+    has_one_BlogProfileImage: 'Blogprofiel afbeelding'
+    many_many_SiteTreeContentReview: 'Sitetree content review'
   SilverStripe\Security\MemberAuthenticator\CMSMemberLoginForm:
     AUTHENTICATORNAME: Inlogformulier
     BUTTONFORGOTPASSWORD: 'Wachtwoord vergeten'
@@ -355,7 +411,6 @@ nl:
       other: '{count} rechten'
     SINGULARNAME: Machtiging
     UserPermissionsIntro: 'Groepen aan deze gebruiker toewijzen zullen diens permissies aanpassen. Zie de sectie Groepen voor meer informatie over machtigingen voor afzonderlijke groepen.'
-    db_Code: Code
     db_Type: 'Soort veld'
     has_one_Group: Groep
   SilverStripe\Security\PermissionCheckboxSetField:
@@ -379,9 +434,8 @@ nl:
     PLURALS:
       one: 'Een permissiecode'
       other: '{count} permissiecodes'
-    PermsError: 'U moet (ADMIN) rechten hebben om de code "{code}" toe te kennen'
+    PermsError: 'Je moet (ADMIN) rechten hebben om de code "{code}" toe te kennen'
     SINGULARNAME: Permissiecode
-    db_Code: Code
     has_one_Role: Rol
   SilverStripe\Security\RememberLoginHash:
     PLURALNAME: 'Versleutelde logins'
@@ -392,7 +446,7 @@ nl:
     has_one_LoginSession: inlogsessie
     has_one_Member: Lid
   SilverStripe\Security\Security:
-    ALREADYLOGGEDIN: 'U hebt geen toegang tot deze pagina.  Als u een andere account met de nodige rechten hebt, kan u hieronder opnieuw inloggen.'
+    ALREADYLOGGEDIN: 'Je hebt geen toegang tot deze pagina. Als je een ander account met de nodige rechten hebt, kun je hieronder opnieuw inloggen.'
     BUTTONSEND: 'Nieuw wachtwoord aanmaken'
     CHANGEPASSWORDBELOW: 'Je kan hieronder het wachtwoord veranderen.'
     CHANGEPASSWORDHEADER: 'Wachtwoord veranderen'
@@ -402,10 +456,15 @@ nl:
     LOGIN: Inloggen
     LOGOUT: Uitloggen
     LOSTPASSWORDHEADER: 'Wachtwoord vergeten'
-    NOTEPAGESECURED: 'Deze pagina is beveiligd. Voer uw gegevens in en u wordt automatisch doorgestuurd.'
+    NOTEPAGESECURED: 'Deze pagina is beveiligd. Voer je gegevens in en je wordt automatisch doorgestuurd.'
     NOTERESETLINKINVALID: '<p>De reset link is ongeldig of verlopen.</p><p>Je kan <a href="{link1}">hier</a> een nieuwe link aanvragen of het wachtwoord veranderen nadat je bent <a href="{link2}">ingelogd</a>.</p>'
     NOTERESETPASSWORD: 'Voer je e-mailadres in en we sturen een link waarmee je een nieuw wachtwoord kunt instellen.'
     PASSWORDRESETSENTHEADER: Verzonden
     PASSWORDRESETSENTTEXT: 'Bedankt! Er is een e-mail verstuurd om je wachtwoord opnieuw in te stellen - mits het e-mailadres reeds bekend is bij ons.'
+  SilverStripe\Security\Validation\PasswordValidator:
+    PREVPASSWORD: 'Dit wachtwoord is in het verleden al gebruikt, kies a.u.b. een nieuw wachtwoord.'
+  SilverStripe\Security\Validation\RulesPasswordValidator:
+    LOWCHARSTRENGTH: 'Maak a.u.b. het wachtwoord sterker door enkele van de volgende karakters te gebruiken: {chars}'
+    TOOSHORT: 'Het wachtwoord is te kort, het moet minimaal {minimum} karakters hebben'
   SilverStripe\View\Shortcodes\EmbedShortcodeProvider:
     INVALID_URL: 'Het inladen van de media-bestanden is mislukt.'

@@ -3,6 +3,7 @@
 namespace SilverStripe\Forms\Tests;
 
 use ReflectionMethod;
+use SilverStripe\Core\Convert;
 use SilverStripe\Assets\Upload_Validator;
 use SilverStripe\Dev\FunctionalTest;
 use SilverStripe\Control\Controller;
@@ -36,7 +37,7 @@ class FileFieldTest extends FunctionalTest
         ];
         $fileField->setValue($fileFieldValue);
 
-        $this->assertTrue($form->validationResult()->isValid());
+        $this->assertTrue($form->validate()->isValid());
     }
 
     /**
@@ -140,7 +141,7 @@ class FileFieldTest extends FunctionalTest
         $fileField->setValue($fileFieldValue);
 
         $this->assertFalse(
-            $form->validationResult()->isValid(),
+            $form->validate()->isValid(),
             'An error occurred when uploading a file, but the validator returned true'
         );
 
@@ -149,7 +150,7 @@ class FileFieldTest extends FunctionalTest
         $fileField->setValue($fileFieldValue);
 
         $this->assertFalse(
-            $form->validationResult()->isValid(),
+            $form->validate()->isValid(),
             'An empty array was passed as parameter for an uploaded file, but the validator returned true'
         );
 
@@ -158,8 +159,45 @@ class FileFieldTest extends FunctionalTest
         $fileField->setValue($fileFieldValue);
 
         $this->assertFalse(
-            $form->validationResult()->isValid(),
+            $form->validate()->isValid(),
             'A null value was passed as parameter for an uploaded file, but the validator returned true'
         );
+    }
+  
+    /**
+     * Test the file size validation will use the PHP max size setting if
+     * no config for the Upload_Validator::default_max_file_size has been defined
+     */
+    public function testWeWillDefaultToPHPMaxUploadSizingForValidation()
+    {
+        // These 3 lines are how SilverStripe works out the default max upload size as defined in Upload_Validator
+        $phpMaxUpload = Convert::memstring2bytes(ini_get('upload_max_filesize'));
+        $maxPost = Convert::memstring2bytes(ini_get('post_max_size'));
+        $defaultUploadSize = min($phpMaxUpload, $maxPost);
+
+        $fileField = new FileField('DemoField');
+
+        $this->assertEquals($defaultUploadSize, $fileField->getValidator()->getAllowedMaxFileSize('jpg'));
+        $this->assertEquals($defaultUploadSize, $fileField->getValidator()->getAllowedMaxFileSize('png'));
+    }
+
+    /**
+     * Test the file size validation will use the default_max_file_size validation config if defined
+     */
+    public function testWeUseConfigForSizingIfDefined()
+    {
+        $configMaxFileSizes = [
+            'jpg' => $jpgSize = '2m',
+            '*' => $defaultSize = '1m',
+        ];
+
+        Upload_Validator::config()->set('default_max_file_size', $configMaxFileSizes);
+
+        $fileField = new FileField('DemoField');
+
+        $this->assertEquals(Convert::memstring2bytes($jpgSize), $fileField->getValidator()->getAllowedMaxFileSize('jpg'));
+
+        // PNG is not explicitly defined in config, so would fall back to *
+        $this->assertEquals(Convert::memstring2bytes($defaultSize), $fileField->getValidator()->getAllowedMaxFileSize('png'));
     }
 }

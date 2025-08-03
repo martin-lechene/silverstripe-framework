@@ -2,6 +2,8 @@
 
 namespace SilverStripe\Forms\Tests\GridField;
 
+use LogicException;
+use ReflectionMethod;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
@@ -20,6 +22,11 @@ use SilverStripe\Forms\Tests\GridField\GridFieldFilterHeaderTest\TeamGroup;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\Filters\PartialMatchFilter;
+use SilverStripe\ORM\Filters\SearchFilter;
+use SilverStripe\ORM\Search\BasicSearchContext;
+use SilverStripe\ORM\Search\SearchContext;
+use SilverStripe\View\ArrayData;
 
 class GridFieldFilterHeaderTest extends SapphireTest
 {
@@ -116,6 +123,29 @@ class GridFieldFilterHeaderTest extends SapphireTest
         $this->assertEquals('testfield', $searchSchema->gridfield);
     }
 
+    /**
+     * Tests the private method that returns the placeholder for the search field
+     */
+    public function testGetPlaceHolder()
+    {
+        $gridField = new GridField('test');
+        $filterHeader = new GridFieldFilterHeader();
+        $reflectionGetPlaceHolder = new ReflectionMethod($filterHeader, 'getPlaceHolder');
+        $reflectionGetPlaceHolder->setAccessible(true);
+
+        // No explicit placeholder or model i18n_plural_name method
+        $this->assertSame('Search "ArrayData"', $reflectionGetPlaceHolder->invoke($filterHeader, new ArrayData()));
+
+        // No explicit placeholder, but model has i18n_plural_name method
+        $model = new DataObject();
+        $this->assertSame('Search "' . $model->i18n_plural_name() . '"', $reflectionGetPlaceHolder->invoke($filterHeader, $model));
+
+        // Explicit placeholder is set, which overrides both of the above cases
+        $filterHeader->setPlaceHolderText('This is the text');
+        $this->assertSame('This is the text', $reflectionGetPlaceHolder->invoke($filterHeader, $model));
+        $this->assertSame('This is the text', $reflectionGetPlaceHolder->invoke($filterHeader, new ArrayData()));
+    }
+
     public function testHandleActionReset()
     {
         // Init Grid state with some pre-existing filters
@@ -141,11 +171,17 @@ class GridFieldFilterHeaderTest extends SapphireTest
     {
         $searchForm = $this->component->getSearchForm($this->gridField);
         $this->assertTrue($searchForm instanceof Form);
-        $fields = $searchForm->Fields()->toArray();
+        $fields = $searchForm->Fields()->flattenFields()->toArray();
         $this->assertEquals('Search__q', $fields[0]->Name);
         $this->assertEquals('Search__Name', $fields[1]->Name);
         $this->assertEquals('Search__City', $fields[2]->Name);
         $this->assertEquals('Search__Cheerleader__Hat__Colour', $fields[3]->Name);
+        $this->assertEquals('Search__TestCompositeSingleTestCompositeNestedGroup', $fields[4]->Name);
+        $this->assertEquals('Search__TestCompositeSingle', $fields[5]->Name);
+        $this->assertEquals('Search__TestCompositeNestedGroup', $fields[6]->Name);
+        $this->assertEquals('Search__TestCompositeNested', $fields[7]->Name);
+        // Make sure there aren't additional fields we're not testing for
+        $this->assertCount(8, $fields);
         $this->assertEquals('TeamsSearchForm', $searchForm->Name);
         $this->assertTrue($searchForm->hasExtraClass('cms-search-form'));
         foreach ($fields as $field) {
@@ -225,5 +261,93 @@ class GridFieldFilterHeaderTest extends SapphireTest
         $htmlFragment = $component->getHTMLFragments($gridField);
 
         $this->assertNull($htmlFragment);
+    }
+
+    public function testGetDisplayFieldsThrowsException()
+    {
+        $component = new GridFieldFilterHeader();
+        $gridField = new GridField('dummy', 'dummy', new ArrayList());
+        $modelClass = ArrayData::class;
+        $gridField->setModelClass($modelClass);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage(
+            'Cannot dynamically instantiate SearchContext. Pass the SearchContext to setSearchContext()'
+            . " or implement a getDefaultSearchContext() method on $modelClass"
+        );
+
+        $component->getSearchContext($gridField);
+    }
+
+    public function testGetBasicSearchContext(): void
+    {
+        $arrayList = new ArrayList();
+        $arrayList->setDataClass(Team::class);
+        $arrayListFilter = new GridFieldFilterHeader();
+        $arrayListGridField = new GridField('dummy', 'dummy', $arrayList);
+        $arrayListSearchContext = $arrayListFilter->getSearchContext($arrayListGridField);
+
+        $dataList = Team::get();
+        $dataListFilter = new GridFieldFilterHeader();
+        $dataListGridField = new GridField('dummy', 'dummy', $dataList);
+        $dataListSearchContext = $dataListFilter->getSearchContext($dataListGridField);
+
+        $this->assertInstanceOf(
+            BasicSearchContext::class,
+            $arrayListSearchContext,
+            'We expect a basic search context as our GridField list is provided via ArrayList'
+        );
+
+        $this->assertNotInstanceOf(
+            BasicSearchContext::class,
+            $dataListSearchContext,
+            'We expect a regular search context as our GridField list is provided via DataList'
+        );
+
+        $arrayListSearchFields = $arrayListSearchContext
+            ->getSearchFields()
+            ->column('Name');
+
+        $dataListSearchFields = $dataListSearchContext
+            ->getSearchFields()
+            ->column('Name');
+
+        $this->assertSame(
+            $arrayListSearchFields,
+            $dataListSearchFields,
+            'We expect the search fields to be the same regardless of how data is provided to the GridField'
+        );
+
+        $arrayListFilters = $arrayListSearchContext->getFilters();
+        $dataListFilters = $dataListSearchContext->getFilters();
+
+        $getFilterName = static function (SearchFilter $filter): string {
+            return $filter->getName();
+        };
+        $arrayListSearchFilterNames = array_map($getFilterName, $arrayListFilters);
+        $dataListSearchFilterNames = array_map($getFilterName, $dataListFilters);
+        $arrayListSearchFilterNames = array_values($arrayListSearchFilterNames);
+        $dataListSearchFilterNames = array_values($dataListSearchFilterNames);
+
+        $this->assertSame(
+            $arrayListSearchFilterNames,
+            $dataListSearchFilterNames,
+            'We expect the search filters to be the same regardless of how data is provided to the GridField'
+        );
+
+        $getFilterType = static function (SearchFilter $filter): string {
+            return $filter::class;
+        };
+        $arrayListSearchFilterTypes = array_map($getFilterType, $arrayListFilters);
+        $arrayListSearchFilterTypes = array_unique($arrayListSearchFilterTypes);
+
+        $this->assertCount(1, $arrayListSearchFilterTypes, 'We expect all filters to be of the same type');
+        $arrayListSearchFilterType = array_shift($arrayListSearchFilterTypes);
+
+        $this->assertEquals(
+            PartialMatchFilter::class,
+            $arrayListSearchFilterType,
+            'We expect partial match filters'
+        );
     }
 }

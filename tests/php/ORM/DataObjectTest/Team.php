@@ -28,6 +28,8 @@ class Team extends DataObject implements TestOnly
 {
     private static $table_name = 'DataObjectTest_Team';
 
+    private static $class_description = 'A team of players';
+
     private static $db = [
         'Title' => 'Varchar',
         'DatabaseField' => 'HTMLVarchar',

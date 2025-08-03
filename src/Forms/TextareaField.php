@@ -2,6 +2,8 @@
 
 namespace SilverStripe\Forms;
 
+use SilverStripe\Dev\Deprecation;
+
 /**
  * TextareaField creates a multi-line text field,
  * allowing more data to be entered than a standard
@@ -206,9 +208,11 @@ class TextareaField extends FormField
      * Return value with all values encoded in html entities
      *
      * @return string Raw HTML
+     * @deprecated 5.4.0 Will be replaced by getFormattedValueEntities() in a future major release
      */
     public function ValueEntities()
     {
+        Deprecation::noticeWithNoReplacment('5.4.0', 'Will be replaced by getFormattedValueEntities() in a future major release');
         return htmlentities($this->Value() ?? '', ENT_COMPAT, 'UTF-8');
     }
 }

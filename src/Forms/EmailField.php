@@ -24,8 +24,7 @@ class EmailField extends TextField
      * @see http://www.ietf.org/rfc/rfc2822.txt
      *
      * @param Validator $validator
-     *
-     * @return string
+     * @return bool
      */
     public function validate($validator)
     {

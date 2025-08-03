@@ -36,6 +36,13 @@ class Environment
     protected static $env = [];
 
     /**
+     * Used by unit tests to override `isCli()`
+     * This is not config. Use reflection to change the value
+     * @internal
+     */
+    private static ?bool $isCliOverride = null;
+
+    /**
      * Extract env vars prior to modification
      *
      * @return array List of all super globals
@@ -217,7 +224,7 @@ class Environment
         // Parse name-value pairs
         $envVars = parse_ini_string($string ?? '') ?: [];
         foreach ($envVars as $name => $value) {
-            self::setEnv($name, $value);
+            Environment::setEnv($name, $value);
         }
     }
 
@@ -251,6 +258,9 @@ class Environment
      */
     public static function isCli()
     {
+        if (Environment::$isCliOverride !== null) {
+            return Environment::$isCliOverride;
+        }
         return in_array(strtolower(php_sapi_name() ?? ''), ['cli', 'phpdbg']);
     }
 }

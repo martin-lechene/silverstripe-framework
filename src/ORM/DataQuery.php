@@ -304,7 +304,11 @@ class DataQuery
                             $collisionClassColumn = $schema->sqlColumnForField($collisionClass, 'ClassName');
                             $collisionClasses = ClassInfo::subclassesFor($collisionClass);
                             $collisionClassesSQL = implode(', ', Convert::raw2sql($collisionClasses, true));
-                            $caseClauses[] = "WHEN {$collisionClassColumn} IN ({$collisionClassesSQL}) THEN $collision";
+                            // Only add clause if this is already joined to avoid "Unknown column 'ClassName'" error
+                            $collisionTableForClassName = $schema->tableForField($collisionClass, 'ClassName');
+                            if (array_key_exists($collisionTableForClassName, $query->getFrom())) {
+                                $caseClauses[] = "WHEN {$collisionClassColumn} IN ({$collisionClassesSQL}) THEN $collision";
+                            }
                         }
                     } else {
                         if ($this->getAllowCollidingFieldStatements()) {
@@ -315,7 +319,9 @@ class DataQuery
                     }
                 }
                 $caseClauses = array_merge($caseClauses, $lastClauses);
-                $query->selectField("CASE " . implode(" ", $caseClauses) . " ELSE NULL END", $collisionField);
+                if (!empty($caseClauses)) {
+                    $query->selectField("CASE " . implode(" ", $caseClauses) . " ELSE NULL END", $collisionField);
+                }
             }
         }
 
@@ -737,7 +743,7 @@ class DataQuery
         $schema = DataObject::getSchema();
 
         // If the query is a DataQuery, make sure all manipulators, joins, etc are applied
-        if ($query instanceof self) {
+        if ($query instanceof DataQuery) {
             $cteDataClass = $query->dataClass();
             $query = $query->query();
             // DataQuery wants to select ALL columns by default,
@@ -1054,7 +1060,6 @@ class DataQuery
         }
 
         // Join table with associated has_one
-        /** @var DataObject $model */
         $foreignKey = $schema->getRemoteJoinField($localClass, $localField, $type, $polymorphic);
         $localIDColumn = $schema->sqlColumnForField($localClass, 'ID', $localPrefix);
         if ($polymorphic) {

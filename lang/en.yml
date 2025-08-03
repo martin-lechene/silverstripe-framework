@@ -6,6 +6,7 @@ en:
     REMOVE: Remove
   SilverStripe\Control\ChangePasswordEmail_ss:
     CHANGEPASSWORDFOREMAIL: 'The password for account with email address {email} has been changed. If you didn\''t change your password please change your password using the link below'
+    CHANGEPASSWORDFOREMAIL2: 'The password for account with email address {email} has been changed. If you did not change your password please change your password using the link below'
     CHANGEPASSWORDTEXT1: 'You changed your password for'
     CHANGEPASSWORDTEXT3: 'Change password'
     HELLO: Hi
@@ -14,6 +15,7 @@ en:
     TEXT1: 'Here is your'
     TEXT2: 'password reset link'
     TEXT3: for
+    TEXT4: 'If the link above does not work, please copy and paste it into the address bar of your browser.'
   SilverStripe\Control\Middleware\ConfirmationMiddleware\GetParameter:
     CONFIRMATION_NAME: '"{key}" GET parameter'
   SilverStripe\Control\Middleware\ConfirmationMiddleware\Url:
@@ -25,9 +27,66 @@ en:
   SilverStripe\Control\RequestProcessor:
     INVALID_REQUEST: 'Invalid request'
     REQUEST_ABORTED: 'Request aborted'
+  SilverStripe\Core\Validation\FieldValidation\BooleanFieldValidator:
+    INVALID: 'Invalid value'
+  SilverStripe\Core\Validation\FieldValidation\DateFieldValidator:
+    INVALID: 'Invalid date'
+    TOOLARGE: 'Value cannot be newer than {maxValue}'
+    TOOSMALL: 'Value cannot be older than {minValue}'
+  SilverStripe\Core\Validation\FieldValidation\DatetimeFieldValidator:
+    INVALID: 'Invalid date/time'
+  SilverStripe\Core\Validation\FieldValidation\DecimalFieldValidator:
+    TOOLARGE: 'Cannot have more than {wholeSize} digits which includes {decimalSize} decimal places'
+  SilverStripe\Core\Validation\FieldValidation\EmailFieldValidator:
+    INVALID: 'Invalid email address'
+  SilverStripe\Core\Validation\FieldValidation\IntFieldValidator:
+    WRONGTYPE: 'Must be an integer'
+  SilverStripe\Core\Validation\FieldValidation\IpFieldValidator:
+    INVALID: 'Invalid IP address'
+  SilverStripe\Core\Validation\FieldValidation\LocaleFieldValidator:
+    INVALID: 'Invalid locale'
+  SilverStripe\Core\Validation\FieldValidation\NumericFieldValidator:
+    NOTNUMERIC: 'Must be numeric'
+    TOOLARGE: 'Value cannot be greater than {maxValue}'
+    TOOSMALL: 'Value cannot be less than {minValue}'
+  SilverStripe\Core\Validation\FieldValidation\NumericNonStringFieldValidator:
+    WRONGTYPE: 'Must be numeric and not a string'
+  SilverStripe\Core\Validation\FieldValidation\OptionFieldValidator:
+    NOTALLOWED: 'Not an allowed value'
+  SilverStripe\Core\Validation\FieldValidation\StringFieldValidator:
+    TOOLONG: 'Cannot have more than {maxLength} characters'
+    TOOSHORT: 'Must have at least {minLength} characters'
+    WRONGTYPE: 'Must be a string'
+  SilverStripe\Core\Validation\FieldValidation\TimeFieldValidator:
+    INVALID: 'Invalid time'
+  SilverStripe\Core\Validation\FieldValidation\UrlFieldValidator:
+    INVALID: 'Invalid URL'
+  SilverStripe\Dev\BulkLoader:
+    CANNOT_CREATE: "Not allowed to create '{type}' records"
+    CANNOT_DELETE: "Not allowed to delete '{type}' records"
+    CANNOT_EDIT: "Not allowed to edit '{type}' records"
+  SilverStripe\Dev\Command\ConfigDump:
+    CAN_DEV_CONFIG_DESCRIPTION: 'Can view /dev/config'
+    CAN_DEV_CONFIG_HELP: 'Can view all application configuration (/dev/config).'
+  SilverStripe\Dev\Command\DbBuild:
+    CAN_DEV_BUILD_DESCRIPTION: 'Can execute /dev/build'
+    CAN_DEV_BUILD_HELP: 'Can execute the build command (/dev/build).'
+  SilverStripe\Dev\DevBuildController:
+    CAN_DEV_BUILD_DESCRIPTION: 'Can execute /dev/build'
+    CAN_DEV_BUILD_HELP: 'Can execute the build command (/dev/build).'
+  SilverStripe\Dev\DevConfigController:
+    CAN_DEV_CONFIG_DESCRIPTION: 'Can view /dev/config'
+    CAN_DEV_CONFIG_HELP: 'Can view all application configuration (/dev/config).'
   SilverStripe\Dev\DevConfirmationController:
     INFO_DESCRIPTION: 'Confirm potentially dangerous operation'
     INFO_TITLE: 'Security Confirmation'
+  SilverStripe\Dev\DevelopmentAdmin:
+    ALL_DEV_ADMIN_DESCRIPTION: 'Can view and execute all /dev endpoints'
+    ALL_DEV_ADMIN_HELP: 'Can view and execute all /dev endpoints'
+    PERMISSIONS_CATEGORY: 'Dev permissions'
+  SilverStripe\Dev\TaskRunner:
+    BUILDTASK_CAN_RUN_DESCRIPTION: 'Can view and execute all /dev/tasks'
+    BUILDTASK_CAN_RUN_HELP: 'Can view and execute all Build Tasks (/dev/tasks). This may still be overriden by individual task view permissions'
   SilverStripe\Forms\CheckboxField:
     NOANSWER: 'No'
     YESANSWER: 'Yes'
@@ -42,6 +101,7 @@ en:
     MAXIMUM: 'Passwords must be at most {max} characters long.'
     RANDOM_IF_EMPTY: 'If this is left blank then a random password will be automatically generated.'
     SHOWONCLICKTITLE: 'Change Password'
+    VALIDATIONSTRONGPASSWORD: 'The password strength is too low. Please use a stronger password.'
   SilverStripe\Forms\DateField:
     NOTSET: 'not set'
     TODAY: today
@@ -111,14 +171,15 @@ en:
     NEW: 'Add new record'
     NEXT: 'Go to next record'
     PREVIOUS: 'Go to previous record'
-    ViewPermissionsFailure: 'It seems you don''t have the necessary permissions to view "{ObjectTitle}"'
+    SAVEDUP: 'Saved successfully'
     SAVETOASTMESSAGE: 'Saved {type} "{title}" successfully.'
-    SAVEDUP: 'Saved successfully.'
+    ViewPermissionsFailure: 'It seems you don''t have the necessary permissions to view "{ObjectTitle}"'
   SilverStripe\Forms\GridField\GridFieldEditButton:
     EDIT: Edit
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search: 'Search "{name}"'
     SearchFormFaliure: 'No search form could be generated'
+    Search_Default: Search
   SilverStripe\Forms\GridField\GridFieldGroupDeleteAction:
     UnlinkSelfFailure: 'Cannot remove yourself from this group, you will lose admin rights'
   SilverStripe\Forms\GridField\GridFieldPaginator:
@@ -135,18 +196,32 @@ en:
     FIELDLABELAMOUNT: Amount
     FIELDLABELCURRENCY: Currency
     INVALID_CURRENCY: 'Currency {currency} is not in the list of allowed currencies'
+    INVALID_CURRENCY_2: 'Currency {currency} is not in the list of allowed currencies. Allowed currencies are: {currencies}.'
   SilverStripe\Forms\MultiSelectField:
     SOURCE_VALIDATION: 'Please select values within the list provided. Invalid option(s) {value} given'
   SilverStripe\Forms\NullableField:
     IsNullLabel: 'Is Null'
   SilverStripe\Forms\NumericField:
+    INVALID: 'Invalid number'
     VALIDATION: "'{value}' is not a number, only numbers can be accepted for this field"
+  SilverStripe\Forms\SearchableDropdownTrait:
+    SELECT: Select...
+    SELECT_OR_TYPE_TO_SEARCH: 'Select or type to search...'
+    TYPE_TO_SEARCH: 'Type to search...'
   SilverStripe\Forms\TextField:
     VALIDATEMAXLENGTH: 'The value for {name} must not exceed {maxLength} characters in length'
   SilverStripe\Forms\TimeField:
     VALIDATEFORMAT: 'Please enter a valid time format ({format})'
+  SilverStripe\Forms\UrlField:
+    INVALID: 'Please enter a valid URL'
+    INVALID_WITH_PROTOCOL: 'Please enter a valid URL including a protocol, e.g {protocol}://example.com'
   SilverStripe\ORM\DataObject:
+    FILTER_WITHINRANGE_FROM: From
+    FILTER_WITHINRANGE_TO: To
     GENERALSEARCH: 'General Search'
+    NO_DUPLICATE: 'Cannot create duplicate {type}'
+    NO_DUPLICATE_MULTI_FIELD: 'Cannot create duplicate {type} - at least one of the following fields need to be changed: {fields}'
+    NO_DUPLICATE_SINGLE_FIELD: 'Cannot create duplicate {type} with "{field}" set to "{value}"'
     PLURALNAME: 'Data Objects'
     PLURALS:
       one: 'A Data Object'
@@ -180,6 +255,25 @@ en:
     YEARS_SHORT_PLURALS:
       one: '{count} year'
       other: '{count} years'
+  SilverStripe\ORM\FieldType\DBDatetime:
+    nDays:
+      one: 'one day'
+      other: '{count} days'
+    nHours:
+      one: 'one hour'
+      other: '{count} hours'
+    nMinutes:
+      one: 'one minute'
+      other: '{count} minutes'
+    nMonths:
+      one: 'one month'
+      other: '{count} months'
+    nSeconds:
+      one: 'one second'
+      other: '{count} seconds'
+    nYears:
+      one: 'one year'
+      other: '{count} years'
   SilverStripe\ORM\FieldType\DBEnum:
     ANY: Any
   SilverStripe\ORM\FieldType\DBForeignKey:
@@ -189,8 +283,13 @@ en:
   SilverStripe\ORM\Hierarchy:
     LIMITED_TITLE: 'Too many children ({count})'
   SilverStripe\ORM\Hierarchy\Hierarchy:
+    ChildTypeNotAllowed: 'Model type "{type}" not allowed as child of this parent record'
     InfiniteLoopNotAllowed: 'Infinite loop found within the "{type}" hierarchy. Please change the parent to resolve this'
     LIMITED_TITLE: 'Too many children ({count})'
+    TypeOnRootNotAllowed: 'Model type "{type}" is not allowed on the root level'
+  SilverStripe\ORM\Search\SearchContextForm:
+    FILTERLABELTEXT: 'Search "{model}"'
+    OpenFilter: 'Open search and filter'
   SilverStripe\ORM\ValidationException:
     DEFAULT_ERROR: 'Validation error'
   SilverStripe\Security\BasicAuth:
@@ -290,6 +389,7 @@ en:
     CURRENT_PASSWORD: 'Current Password'
     EDIT_PASSWORD: 'New Password'
     EMAIL: Email
+    EMAIL_FAILED: 'There was an error when trying to email you a password reset link.'
     EMPTYNEWPASSWORD: "The new password can't be empty, please try again"
     ENTEREMAIL: 'Please enter an email address to get a password reset link.'
     ERRORLOCKEDOUT2: 'Your account has been temporarily disabled because of too many failed attempts at logging in. Please try again in {count} minutes.'
@@ -324,6 +424,7 @@ en:
     db_AccountResetHash: 'Account reset hash'
     db_AutoLoginExpired: 'Auto login expired'
     db_AutoLoginHash: 'Auto login hash'
+    db_AutoLoginTempHash: 'Auto login temp hash'
     db_BlogProfileSummary: 'Blog profile summary'
     db_DefaultRegisteredMethodID: 'Default registered method ID'
     db_Email: Email
@@ -447,5 +548,10 @@ en:
     NOTERESETPASSWORD: 'Enter your e-mail address and we will send you a link with which you can reset your password'
     PASSWORDRESETSENTHEADER: 'Password reset link sent'
     PASSWORDRESETSENTTEXT: 'Thank you. A reset link has been sent, provided an account exists for this email address.'
+  SilverStripe\Security\Validation\PasswordValidator:
+    PREVPASSWORD: "You've already used that password in the past, please choose a new password"
+  SilverStripe\Security\Validation\RulesPasswordValidator:
+    LOWCHARSTRENGTH: 'Please increase password strength by adding some of the following characters: {chars}'
+    TOOSHORT: 'Password is too short, it must be {minimum} or more characters long'
   SilverStripe\View\Shortcodes\EmbedShortcodeProvider:
     INVALID_URL: 'There was a problem loading the media.'

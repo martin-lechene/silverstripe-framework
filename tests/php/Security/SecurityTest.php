@@ -486,6 +486,28 @@ class SecurityTest extends FunctionalTest
         $this->assertEquals($this->idFromFixture(Member::class, 'test'), $this->session()->get('loggedInAs'));
     }
 
+    public function testLostPasswordFormWithUniqueFieldIdentifier()
+    {
+        // override the unique identifier field
+        Member::config()->set('unique_identifier_field', 'Username');
+
+        /** @var Member $admin */
+        $member = $this->objFromFixture(Member::class, 'username-member');
+        $member->FailedLoginCount = 99;
+        $member->LockedOutUntil = DBDatetime::now()->getValue();
+        $member->write();
+
+        // load lostpassword form
+        $this->get('Security/lostpassword');
+        $labelElement = $this->cssParser()->getBySelector('#LostPasswordForm_lostPasswordForm_Email_Holder label');
+
+        $this->assertEquals(1, count($labelElement ?? []));
+        $this->assertStringContainsString(
+            '<label class="left" for="LostPasswordForm_lostPasswordForm_Email">Username</label>',
+            (string)$labelElement[0]->asXML()
+        );
+    }
+
     public function testChangePasswordFromLostPassword()
     {
         /** @var Member $admin */
@@ -688,7 +710,7 @@ class SecurityTest extends FunctionalTest
     public function testDatabaseIsReadyWithInsufficientMemberColumns()
     {
         Security::clear_database_is_ready();
-        DBEnum::flushCache();
+        DBEnum::reset();
 
         // Assumption: The database has been built correctly by the test runner,
         // and has all columns present in the ORM
@@ -787,6 +809,41 @@ class SecurityTest extends FunctionalTest
                 'action_doChangePassword' => 1,
             ]
         );
+    }
+
+    public function provideWithMinimumExecutionTime(): array
+    {
+        return [
+            'check default is used' => [
+                'useDefault' => false,
+                'minExecution' => 100,
+            ],
+            'check arg is used' => [
+                'useDefault' => true,
+                'minExecution' => 100,
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideWithMinimumExecutionTime
+     */
+    public function testWithMinimumExecutionTime(bool $useDefault, int $minExecution): void
+    {
+        if ($useDefault) {
+            Security::config()->set('secure_min_execution_time', $minExecution);
+            $minExecutionArg = 0;
+        } else {
+            Security::config()->set('secure_min_execution_time', 1);
+            $minExecutionArg = $minExecution;
+        }
+
+        $start = hrtime(true);
+        Security::withMinimumExecutionTime(fn() => null, $minExecutionArg);
+        $timeTaken = hrtime(true) - $start;
+        $this->assertGreaterThanOrEqual($minExecution, $timeTaken / 1000000);
+        // Make sure it wasn't much longer than the min - the test empty callback should take basically no time at all.
+        $this->assertLessThan($minExecution + 1, ($timeTaken / 1000000));
     }
 
     /**

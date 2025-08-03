@@ -12,6 +12,7 @@ use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Core\Kernel;
 use SilverStripe\Core\Path;
+use SilverStripe\Dev\Deprecation;
 use SilverStripe\Versioned\Versioned;
 use SilverStripe\View\Requirements;
 use SilverStripe\View\Requirements_Backend;
@@ -164,7 +165,6 @@ class Director implements TemplateGlobalProvider
         // Build list of cleanup promises
         $finally = [];
 
-        /** @var Kernel $kernel */
         $kernel = Injector::inst()->get(Kernel::class);
         $kernel->nest();
         $finally[] = function () use ($kernel) {
@@ -239,7 +239,7 @@ class Director implements TemplateGlobalProvider
 
         // Ensure URL is properly made relative.
         // Example: url passed is "/ss31/my-page" (prefixed with BASE_URL), this should be changed to "my-page"
-        $url = self::makeRelative($url);
+        $url = Director::makeRelative($url);
         if (strpos($url ?? '', '?') !== false) {
             list($url, $getVarsEncoded) = explode('?', $url ?? '', 2);
             parse_str($getVarsEncoded ?? '', $newVars['_GET']);
@@ -372,7 +372,7 @@ class Director implements TemplateGlobalProvider
      */
     public static function get_current_page()
     {
-        return self::$current_page ? self::$current_page : Controller::curr();
+        return Director::$current_page ? Director::$current_page : Controller::curr();
     }
 
     /**
@@ -382,7 +382,7 @@ class Director implements TemplateGlobalProvider
      */
     public static function set_current_page($page)
     {
-        self::$current_page = $page;
+        Director::$current_page = $page;
     }
 
     /**
@@ -395,7 +395,7 @@ class Director implements TemplateGlobalProvider
      *     - REQUEST - Resolve this path to the current url (i.e. behaves as though no `<base>` tag is provided in a html document)
      *     - ROOT - Treat this as though it was an absolute path, and append it to the protocol and hostname.
      */
-    public static function absoluteURL(string $url, string $relativeParent = self::BASE): string|bool
+    public static function absoluteURL(string $url, string $relativeParent = Director::BASE): string|bool
     {
         // Check if there is already a protocol given
         if (preg_match('/^http(s?):\/\//', $url ?? '')) {
@@ -405,14 +405,14 @@ class Director implements TemplateGlobalProvider
         // Absolute urls without protocol are added
         // E.g. //google.com -> http://google.com
         if (strpos($url ?? '', '//') === 0) {
-            return Controller::normaliseTrailingSlash(self::protocol() . substr($url ?? '', 2));
+            return Controller::normaliseTrailingSlash(Director::protocol() . substr($url ?? '', 2));
         }
 
         // Determine method for mapping the parent to this relative url
-        if ($relativeParent === self::ROOT || self::is_root_relative_url($url)) {
+        if ($relativeParent === Director::ROOT || Director::is_root_relative_url($url)) {
             // Root relative urls always should be evaluated relative to the root
-            $parent = self::protocolAndHost();
-        } elseif ($relativeParent === self::REQUEST) {
+            $parent = Director::protocolAndHost();
+        } elseif ($relativeParent === Director::REQUEST) {
             // Request relative urls rely on the REQUEST_URI param (old default behaviour)
             if (!isset($_SERVER['REQUEST_URI'])) {
                 return false;
@@ -420,7 +420,7 @@ class Director implements TemplateGlobalProvider
             $parent = dirname($_SERVER['REQUEST_URI'] . 'x');
         } else {
             // Default to respecting site base_url
-            $parent = self::absoluteBaseURL();
+            $parent = Director::absoluteBaseURL();
         }
 
         // Map empty urls to relative slash and join to base
@@ -490,7 +490,7 @@ class Director implements TemplateGlobalProvider
     public static function host(HTTPRequest $request = null)
     {
         // Check if overridden by alternate_base_url
-        if ($baseURL = self::config()->get('alternate_base_url')) {
+        if ($baseURL = static::config()->get('alternate_base_url')) {
             $baseURL = Injector::inst()->convertServiceProperty($baseURL);
             $host = static::parseHost($baseURL);
             if ($host) {
@@ -509,7 +509,7 @@ class Director implements TemplateGlobalProvider
         }
 
         // Check base url
-        if ($baseURL = self::config()->uninherited('default_base_url')) {
+        if ($baseURL = static::config()->uninherited('default_base_url')) {
             $baseURL = Injector::inst()->convertServiceProperty($baseURL);
             $host = static::parseHost($baseURL);
             if ($host) {
@@ -567,7 +567,7 @@ class Director implements TemplateGlobalProvider
      */
     public static function protocol(HTTPRequest $request = null)
     {
-        return (self::is_https($request)) ? 'https://' : 'http://';
+        return (Director::is_https($request)) ? 'https://' : 'http://';
     }
 
     /**
@@ -579,7 +579,7 @@ class Director implements TemplateGlobalProvider
     public static function is_https(HTTPRequest $request = null)
     {
         // Check override from alternate_base_url
-        if ($baseURL = self::config()->uninherited('alternate_base_url')) {
+        if ($baseURL = static::config()->uninherited('alternate_base_url')) {
             $baseURL = Injector::inst()->convertServiceProperty($baseURL);
             $protocol = parse_url($baseURL ?? '', PHP_URL_SCHEME);
             if ($protocol) {
@@ -594,7 +594,7 @@ class Director implements TemplateGlobalProvider
         }
 
         // Check default_base_url
-        if ($baseURL = self::config()->uninherited('default_base_url')) {
+        if ($baseURL = static::config()->uninherited('default_base_url')) {
             $baseURL = Injector::inst()->convertServiceProperty($baseURL);
             $protocol = parse_url($baseURL ?? '', PHP_URL_SCHEME);
             if ($protocol) {
@@ -613,7 +613,7 @@ class Director implements TemplateGlobalProvider
     public static function baseURL()
     {
         // Check override base_url
-        $alternate = self::config()->get('alternate_base_url');
+        $alternate = static::config()->get('alternate_base_url');
         if ($alternate) {
             $alternate = Injector::inst()->convertServiceProperty($alternate);
             return rtrim(parse_url($alternate ?? '', PHP_URL_PATH) ?? '', '/') . '/';
@@ -660,8 +660,8 @@ class Director implements TemplateGlobalProvider
      */
     public static function publicFolder()
     {
-        $folder = self::baseFolder();
-        $publicDir = self::publicDir();
+        $folder = Director::baseFolder();
+        $publicDir = Director::publicDir();
         if ($publicDir) {
             return Path::join($folder, $publicDir);
         }
@@ -695,7 +695,7 @@ class Director implements TemplateGlobalProvider
         }
 
         // Remove base folder or url
-        foreach ([self::publicFolder(), self::baseFolder(), self::baseURL()] as $base) {
+        foreach ([Director::publicFolder(), Director::baseFolder(), Director::baseURL()] as $base) {
             // Ensure single / doesn't break comparison (unless it would make base empty)
             $base = rtrim($base ?? '', '\\/') ?: $base;
             if (stripos($url ?? '', $base ?? '') === 0) {
@@ -822,13 +822,22 @@ class Director implements TemplateGlobalProvider
 
         // Allow extensions to weigh in
         $isSiteUrl = false;
-        static::singleton()->extend('updateIsSiteUrl', $isSiteUrl, $url);
+        // Not using static::singleton() here because it can break
+        // functional tests such as those in HTTPCacheControlIntegrationTest
+        // This happens because a singleton of Director is instantiating prior to tests being run,
+        // because Controller::normaliseTrailingSlash() is called during SapphireTest::setUp(),
+        // which in turn calls Director::is_site_url()
+        // For this specific use case we don't need to use dependency injection because the
+        // chance of the extend() method being customised in projects is low.
+        // Any extension hooks implementing updateIsSiteUrl() will still be called as expected
+        $director = new static();
+        $director->extend('updateIsSiteUrl', $isSiteUrl, $url);
         if ($isSiteUrl) {
             return true;
         }
 
         // Relative urls always are site urls
-        return self::is_relative_url($url);
+        return Director::is_relative_url($url);
     }
 
     /**
@@ -841,20 +850,20 @@ class Director implements TemplateGlobalProvider
     public static function getAbsFile($file)
     {
         // If already absolute
-        if (self::is_absolute($file)) {
+        if (Director::is_absolute($file)) {
             return $file;
         }
 
         // If path is relative to public folder search there first
-        if (self::publicDir()) {
-            $path = Path::join(self::publicFolder(), $file);
+        if (Director::publicDir()) {
+            $path = Path::join(Director::publicFolder(), $file);
             if (file_exists($path ?? '')) {
                 return $path;
             }
         }
 
         // Default to base folder
-        return Path::join(self::baseFolder(), $file);
+        return Path::join(Director::baseFolder(), $file);
     }
 
     /**
@@ -878,9 +887,9 @@ class Director implements TemplateGlobalProvider
      */
     public static function absoluteBaseURL()
     {
-        $baseURL = self::absoluteURL(
-            self::baseURL(),
-            self::ROOT
+        $baseURL = Director::absoluteURL(
+            Director::baseURL(),
+            Director::ROOT
         );
         return Controller::normaliseTrailingSlash($baseURL);
     }
@@ -987,7 +996,7 @@ class Director implements TemplateGlobalProvider
      */
     public static function is_ajax(HTTPRequest $request = null)
     {
-        $request = self::currentRequest($request);
+        $request = Director::currentRequest($request);
         if ($request) {
             return $request->isAjax();
         }
@@ -1016,7 +1025,6 @@ class Director implements TemplateGlobalProvider
      */
     public static function get_environment_type()
     {
-        /** @var Kernel $kernel */
         $kernel = Injector::inst()->get(Kernel::class);
         return $kernel->getEnvironment();
     }
@@ -1030,9 +1038,11 @@ class Director implements TemplateGlobalProvider
      * @param HTTPRequest $request
      *
      * @return string|null null if not overridden, otherwise the actual value
+     * @deprecated 5.4.0 Use get_environment_type() instead.
      */
     public static function get_session_environment_type(HTTPRequest $request = null)
     {
+        Deprecation::notice('5.4.0', 'Use get_environment_type() instead.');
         $request = static::currentRequest($request);
 
         if (!$request) {
@@ -1056,7 +1066,7 @@ class Director implements TemplateGlobalProvider
      */
     public static function isLive()
     {
-        return self::get_environment_type() === 'live';
+        return Director::get_environment_type() === 'live';
     }
 
     /**
@@ -1067,7 +1077,7 @@ class Director implements TemplateGlobalProvider
      */
     public static function isDev()
     {
-        return self::get_environment_type() === 'dev';
+        return Director::get_environment_type() === 'dev';
     }
 
     /**
@@ -1078,7 +1088,7 @@ class Director implements TemplateGlobalProvider
      */
     public static function isTest()
     {
-        return self::get_environment_type() === 'test';
+        return Director::get_environment_type() === 'test';
     }
 
     /**

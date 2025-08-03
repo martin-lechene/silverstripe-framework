@@ -6,6 +6,8 @@ namespace SilverStripe\Security\MemberAuthenticator;
 use SilverStripe\Forms\EmailField;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\FormAction;
+use SilverStripe\Forms\TextField;
+use SilverStripe\Security\Member;
 
 /**
  * Class LostPasswordForm handles the requests for lost password form generation
@@ -23,9 +25,15 @@ class LostPasswordForm extends MemberLoginForm
      */
     public function getFormFields()
     {
-        return FieldList::create(
-            EmailField::create('Email', _t('SilverStripe\\Security\\Member.EMAIL', 'Email'))
-        );
+        $uniqueIdentifier = Member::config()->get('unique_identifier_field');
+        $label = Member::singleton()->fieldLabel($uniqueIdentifier);
+        if ($uniqueIdentifier === 'Email') {
+            $emailField = EmailField::create('Email', $label);
+        } else {
+            // This field needs to still be called Email, but we can re-label it
+            $emailField = TextField::create('Email', $label);
+        }
+        return FieldList::create($emailField);
     }
 
     /**

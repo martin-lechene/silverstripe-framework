@@ -61,6 +61,8 @@ th:
     Save: บันทึก
   SilverStripe\Forms\GridField\GridFieldEditButton:
     EDIT: แก้ไข
+  SilverStripe\Forms\GridField\GridFieldFilterHeader:
+    Search_Default: ค้นหา
   SilverStripe\Forms\GridField\GridFieldPaginator:
     OF: จาก
     Page: หน้า

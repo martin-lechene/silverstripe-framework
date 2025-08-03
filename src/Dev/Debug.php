@@ -102,8 +102,8 @@ class Debug
      */
     public static function dump($val, HTTPRequest $request = null)
     {
-        echo self::create_debug_view($request)
-            ->renderVariable($val, self::caller());
+        echo Debug::create_debug_view($request)
+            ->renderVariable($val, Debug::caller());
     }
 
     /**
@@ -164,16 +164,20 @@ class Debug
         if (Director::is_cli()) {
             return false;
         }
+        $accepted = [];
 
         // Get current request if registered
         if (!$request && Injector::inst()->has(HTTPRequest::class)) {
             $request = Injector::inst()->get(HTTPRequest::class);
         }
-        if (!$request) {
-            return false;
+        if ($request) {
+            $accepted = $request->getAcceptMimetypes(false);
+        } elseif (isset($_SERVER['HTTP_ACCEPT'])) {
+            // If there's no request object available, fallback to global $_SERVER
+            // This can happen in some circumstances when a PHP error is triggered
+            // during a regular HTTP request
+            $accepted = preg_split('#\s*,\s*#', $_SERVER['HTTP_ACCEPT']);
         }
-        // Request must include text/html
-        $accepted = $request->getAcceptMimetypes(false);
 
         // Explicit opt in
         if (in_array('text/html', $accepted ?? [])) {
@@ -195,9 +199,11 @@ class Debug
     /**
      * Check if the user has permissions to run URL debug tools,
      * else redirect them to log in.
+     * @deprecated 5.4.0 Will be removed without equivalent functionality in a future major release.
      */
     public static function require_developer_login()
     {
+        Deprecation::noticeWithNoReplacment('5.4.0');
         // Don't require login for dev mode
         if (Director::isDev()) {
             return;

@@ -174,7 +174,7 @@ class HTTPResponse
      */
     public function setStatusCode($code, $description = null)
     {
-        if (isset(self::$status_codes[$code])) {
+        if (isset(HTTPResponse::$status_codes[$code])) {
             $this->statusCode = $code;
         } else {
             throw new InvalidArgumentException("Unrecognised HTTP status code '$code'");
@@ -183,7 +183,7 @@ class HTTPResponse
         if ($description) {
             $this->statusDescription = $description;
         } else {
-            $this->statusDescription = self::$status_codes[$code];
+            $this->statusDescription = HTTPResponse::$status_codes[$code];
         }
         return $this;
     }
@@ -320,7 +320,7 @@ class HTTPResponse
 
     public function redirect(string $dest, int $code = 302): static
     {
-        if (!in_array($code, self::$redirect_codes)) {
+        if (!in_array($code, HTTPResponse::$redirect_codes)) {
             trigger_error("Invalid HTTP redirect code {$code}", E_USER_WARNING);
             $code = 302;
         }
@@ -411,7 +411,6 @@ EOT
         // a more specific error description.
         $body = $this->getBody();
         if ($this->isError() && empty($body)) {
-            /** @var HandlerInterface $handler */
             $handler = Injector::inst()->get(HandlerInterface::class);
             $formatter = $handler->getFormatter();
             echo $formatter->format([
@@ -440,7 +439,7 @@ EOT
      */
     public function isRedirect()
     {
-        return in_array($this->getStatusCode(), self::$redirect_codes);
+        return in_array($this->getStatusCode(), HTTPResponse::$redirect_codes);
     }
 
     /**

@@ -4,6 +4,7 @@ namespace SilverStripe\Control;
 
 use BadMethodCallException;
 use SilverStripe\Core\Config\Configurable;
+use SilverStripe\Dev\Deprecation;
 
 /**
  * Handles all manipulation of the session.
@@ -131,6 +132,7 @@ class Session
     /**
      * @config
      * @var string
+     * @deprecated 5.4.3 Will be removed without equivalent functionality to replace it in a future major release
      */
     private static $cookie_name_secure = 'SECSESSID';
 
@@ -235,7 +237,7 @@ class Session
         }
 
         // Funny business detected!
-        if (self::config()->get('strict_user_agent_check') && isset($this->data['HTTP_USER_AGENT'])) {
+        if (static::config()->get('strict_user_agent_check') && isset($this->data['HTTP_USER_AGENT'])) {
             if ($this->data['HTTP_USER_AGENT'] !== $this->userAgent($request)) {
                 $this->clearAll();
                 $this->restart($request);
@@ -265,11 +267,16 @@ class Session
     }
 
     /**
-     * @param HTTPRequest $request
+     * @param HTTPRequest $request - deprecated will be removed
      * @return bool
      */
     public function requestContainsSessionId(HTTPRequest $request)
     {
+        Deprecation::noticeWithNoReplacment(
+            '5.4.3',
+            'The $request parameter is deprecated and will be removed in a future major release',
+            Deprecation::SCOPE_GLOBAL
+        );
         $secure = Director::is_https($request) && $this->config()->get('cookie_secure');
         $name = $secure ? $this->config()->get('cookie_name_secure') : session_name();
         return (bool)Cookie::get($name);

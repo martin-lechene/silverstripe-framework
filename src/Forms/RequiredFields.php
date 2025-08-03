@@ -3,6 +3,7 @@
 namespace SilverStripe\Forms;
 
 use SilverStripe\ORM\ArrayLib;
+use SilverStripe\Dev\Deprecation;
 
 /**
  * Required Fields allows you to set which fields need to be present before
@@ -11,9 +12,16 @@ use SilverStripe\ORM\ArrayLib;
  *
  * Validation is performed on a field by field basis through
  * {@link FormField::validate}.
+ *
+ * @deprecated 5.4.0 Will be renamed to SilverStripe\Forms\Validation\RequiredFieldsValidator
  */
 class RequiredFields extends Validator
 {
+    /**
+     * Whether to globally allow whitespace only as a valid value for a required field
+     * Can be overridden on a per-instance basis
+     */
+    private static bool $allow_whitespace_only = true;
 
     /**
      * List of required fields
@@ -23,11 +31,22 @@ class RequiredFields extends Validator
     protected $required;
 
     /**
+     * Whether to allow whitespace only as a valid value for a required field for this instance
+     * By default, this is set to null which will revert to the global default
+     */
+    private ?bool $allowWhitespaceOnly = null;
+
+    /**
      * Pass each field to be validated as a separate argument to the constructor
      * of this object. (an array of elements are ok).
      */
     public function __construct()
     {
+        Deprecation::noticeWithNoReplacment(
+            '5.4.0',
+            'Will be renamed to SilverStripe\\Forms\\Validation\\RequiredFieldsValidator in a future major release',
+            Deprecation::SCOPE_CLASS
+        );
         $required = func_get_args();
         if (isset($required[0]) && is_array($required[0])) {
             $required = $required[0];
@@ -39,6 +58,22 @@ class RequiredFields extends Validator
         }
 
         parent::__construct();
+    }
+
+    /**
+     * Get whether to allow whitespace only as a valid value for a required field
+     */
+    public function getAllowWhitespaceOnly(): ?bool
+    {
+        return $this->allowWhitespaceOnly ?? static::config()->get('allow_whitespace_only');
+    }
+
+    /**
+     * Set whether to allow whitespace only as a valid value for a required field
+     */
+    public function setAllowWhitespaceOnly(?bool $allow)
+    {
+        $this->allowWhitespaceOnly = $allow;
     }
 
     /**
@@ -113,11 +148,20 @@ class RequiredFields extends Validator
                 if ($formField instanceof FileField && isset($value['error']) && $value['error']) {
                     $error = true;
                 } else {
-                    $error = (count($value ?? [])) ? false : true;
+                    if (is_a($formField, HasOneRelationFieldInterface::class) && isset($value['value'])) {
+                        $stringValue = (string) $value['value'];
+                        $error = in_array($stringValue, ['0', '']);
+                    } else {
+                        $error = (count($value ?? [])) ? false : true;
+                    }
                 }
             } else {
                 $stringValue = (string) $value;
-                if ($formField instanceof TreeDropdownField) {
+                if (!$this->getAllowWhitespaceOnly()) {
+                    $stringValue = preg_replace('/^\s+/u', '', $stringValue);
+                    $stringValue = preg_replace('/\s+$/u', '', $stringValue);
+                }
+                if (is_a($formField, HasOneRelationFieldInterface::class)) {
                     // test for blank string as well as '0' because older versions of silverstripe/admin FormBuilder
                     // forms created using redux-form would have a value of null for unsaved records
                     // the null value will have been converted to '' by the time it gets to this point

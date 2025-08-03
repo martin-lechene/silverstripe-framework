@@ -4,6 +4,7 @@ namespace SilverStripe\Forms;
 
 use InvalidArgumentException;
 use SilverStripe\ORM\ValidationResult;
+use SilverStripe\Dev\Deprecation;
 
 /**
  * CompositeValidator can contain between 0 and many different types of Validators. Each Validator is itself still
@@ -30,27 +31,28 @@ use SilverStripe\ORM\ValidationResult;
  * {
  *   $compositeValidator->addValidator(RequiredFields::create(['AdditionalContent']));
  * }
- *
- * Class CompositeValidator
- *
- * @package SilverStripe\Forms
+ * @deprecated 5.4.0 Will be renamed to SilverStripe\Forms\Validation\CompositeValidator
  */
 class CompositeValidator extends Validator
 {
     /**
-     * @var array|Validator[]
+     * @var array<Validator>
      */
     private $validators;
 
     /**
      * CompositeValidator constructor.
      *
-     * @param array|Validator[] $validators
+     * @param array<Validator> $validators
      */
     public function __construct(array $validators = [])
     {
+        Deprecation::noticeWithNoReplacment(
+            '5.4.0',
+            'Will be renamed to SilverStripe\\Forms\\Validation\\CompositeValidator in a future major release',
+            Deprecation::SCOPE_CLASS
+        );
         $this->validators = array_values($validators ?? []);
-
         parent::__construct();
     }
 
@@ -146,7 +148,7 @@ class CompositeValidator extends Validator
     }
 
     /**
-     * @return array|Validator[]
+     * @return array<Validator>
      */
     public function getValidators(): array
     {
@@ -159,8 +161,9 @@ class CompositeValidator extends Validator
      * The keys for the return array match the keys in the unfiltered array. You cannot assume the keys will be
      * sequential or that the first key will be ZERO.
      *
-     * @param string $className
-     * @return array|Validator[]
+     * @template T of Validator
+     * @param class-string<T> $className
+     * @return T[]
      */
     public function getValidatorsByType(string $className): array
     {

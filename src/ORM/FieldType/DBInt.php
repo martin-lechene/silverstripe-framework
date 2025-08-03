@@ -2,6 +2,7 @@
 
 namespace SilverStripe\ORM\FieldType;
 
+use SilverStripe\Dev\Deprecation;
 use SilverStripe\Forms\NumericField;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DB;
@@ -15,7 +16,8 @@ class DBInt extends DBField
 
     public function __construct($name = null, $defaultVal = 0)
     {
-        $this->defaultVal = is_int($defaultVal) ? $defaultVal : 0;
+        $defaultValue = is_int($defaultVal) ? $defaultVal : 0;
+        $this->setDefaultValue($defaultValue);
 
         parent::__construct($name);
     }
@@ -43,15 +45,19 @@ class DBInt extends DBField
             'datatype' => 'int',
             'precision' => 11,
             'null' => 'not null',
-            'default' => $this->defaultVal,
+            'default' => $this->getDefaultValue(),
             'arrayValue' => $this->arrayValue
         ];
         $values = ['type' => 'int', 'parts' => $parts];
         DB::require_field($this->tableName, $this->name, $values);
     }
 
+    /**
+     * @deprecated 5.4.0 Will be removed without equivalent functionality to replace it in a future major release
+     */
     public function Times()
     {
+        Deprecation::noticeWithNoReplacment('5.4.0');
         $output = new ArrayList();
         for ($i = 0; $i < $this->value; $i++) {
             $output->push(ArrayData::create(['Number' => $i + 1]));

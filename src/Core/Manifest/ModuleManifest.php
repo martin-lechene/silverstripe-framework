@@ -148,7 +148,6 @@ class ModuleManifest
     {
         $modules = $this->getModules();
         // Work in reverse priority, so the higher priority modules get later execution
-        /** @var Module $module */
         foreach (array_reverse($modules ?? []) as $module) {
             $module->activate();
         }
@@ -242,7 +241,7 @@ class ModuleManifest
         );
 
         if ($project) {
-            $sorter->setVariable(self::PROJECT_KEY, $project);
+            $sorter->setVariable(ModuleManifest::PROJECT_KEY, $project);
         }
 
         $this->modules = $sorter->getSortedList();
@@ -262,7 +261,6 @@ class ModuleManifest
             return null;
         }
 
-        /** @var Module $rootModule */
         $rootModule = null;
 
         // Find based on loaded modules

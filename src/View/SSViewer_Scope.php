@@ -5,6 +5,13 @@ namespace SilverStripe\View;
 use ArrayIterator;
 use Countable;
 use Iterator;
+use SilverStripe\Dev\Deprecation;
+use SilverStripe\ORM\FieldType\DBBoolean;
+use SilverStripe\ORM\FieldType\DBText;
+use SilverStripe\ORM\FieldType\DBFloat;
+use SilverStripe\ORM\FieldType\DBInt;
+use SilverStripe\ORM\FieldType\DBField;
+use SilverStripe\ORM\PaginatedList;
 
 /**
  * This tracks the current scope for an SSViewer instance. It has three goals:
@@ -24,6 +31,8 @@ use Iterator;
  * We also keep the index of the current starting point for lookups. A lookup is a sequence of obj calls -
  * when in a loop or with tag the end result becomes the new scope, but for injections, we throw away the lookup
  * and revert back to the original scope once we've got the value we're after
+ *
+ * @deprecated 5.4.0 Will be renamed to SilverStripe\TemplateEngine\ScopeManager
  */
 class SSViewer_Scope
 {
@@ -107,6 +116,11 @@ class SSViewer_Scope
      */
     public function __construct($item, SSViewer_Scope $inheritedScope = null)
     {
+        Deprecation::noticeWithNoReplacment(
+            '5.4.0',
+            'Will be renamed to SilverStripe\TemplateEngine\ScopeManager in a future major release',
+            Deprecation::SCOPE_CLASS
+        );
         $this->item = $item;
 
         $this->itemIterator = ($inheritedScope) ? $inheritedScope->itemIterator : null;
@@ -118,16 +132,27 @@ class SSViewer_Scope
      * Returns the current "active" item
      *
      * @return object
+     * @deprecated 5.4.0 use getCurrentItem() instead.
      */
     public function getItem()
     {
-        return $this->itemIterator ? $this->itemIterator->current() : $this->item;
+        Deprecation::notice('5.4.0', 'use getCurrentItem() instead.');
+        $item = $this->itemIterator ? $this->itemIterator->current() : $this->item;
+        if (is_scalar($item)) {
+            $item = $this->convertScalarToDBField($item);
+        }
+        return $item;
+    }
+
+    public function getCurrentItem()
+    {
+        return $this->getItem();
     }
 
     /**
      * Called at the start of every lookup chain by SSTemplateParser to indicate a new lookup from local scope
      *
-     * @return self
+     * @return SSViewer_Scope
      */
     public function locally()
     {
@@ -176,7 +201,10 @@ class SSViewer_Scope
      */
     public function getObj($name, $arguments = [], $cache = false, $cacheName = null)
     {
-        $on = $this->itemIterator ? $this->itemIterator->current() : $this->item;
+        $on = $this->getCurrentItem();
+        if ($on === null) {
+            return null;
+        }
         return $on->obj($name, $arguments, $cache, $cacheName);
     }
 
@@ -186,9 +214,11 @@ class SSViewer_Scope
      * @param bool $cache
      * @param string $cacheName
      * @return $this
+     * @deprecated 5.4.0 Will be renamed scopeToIntermediateValue()
      */
     public function obj($name, $arguments = [], $cache = false, $cacheName = null)
     {
+        Deprecation::noticeWithNoReplacment('5.4.0', 'Will be renamed scopeToIntermediateValue()');
         switch ($name) {
             case 'Up':
                 if ($this->upIndex === null) {
@@ -240,7 +270,7 @@ class SSViewer_Scope
      */
     public function self()
     {
-        $result = $this->itemIterator ? $this->itemIterator->current() : $this->item;
+        $result = $this->getCurrentItem();
         $this->resetLocalScope();
 
         return $result;
@@ -249,7 +279,7 @@ class SSViewer_Scope
     /**
      * Jump to the last item in the stack, called when a new item is added before a loop/with
      *
-     * @return self
+     * @return SSViewer_Scope
      */
     public function pushScope()
     {
@@ -271,7 +301,7 @@ class SSViewer_Scope
     /**
      * Jump back to "previous" item in the stack, called after a loop/with block
      *
-     * @return self
+     * @return SSViewer_Scope
      */
     public function popScope()
     {
@@ -293,8 +323,8 @@ class SSViewer_Scope
         }
 
         if (!$this->itemIterator) {
-            // Note: it is important that getIterator() is called before count() as implemenations may rely on
-            // this to efficiency get both the number of records and an iterator (e.g. DataList does this)
+            // Note: it is important that getIterator() is called before count() as implementations may rely on
+            // this to efficiently get both the number of records and an iterator (e.g. DataList does this)
 
             // Item may be an array or a regular IteratorAggregate
             if (is_array($this->item)) {
@@ -307,11 +337,19 @@ class SSViewer_Scope
                 $this->itemIterator->rewind();
             }
 
-            // If the item implements Countable, use that to fetch the count, otherwise we have to inspect the
-            // iterator and then rewind it.
-            if ($this->item instanceof Countable) {
+            // Special case: we *don't* want to use count() on PaginatedList. This is because it'll call
+            // PaginatedList::count(), which currently returns the full list count rather than the count of items
+            // on the current page (which is what we need for the iterator count)
+            if ($this->item instanceof PaginatedList) {
+                // We have to re-fetch the iterator before calling getInnerIterator(): we need to count a copy of the
+                // inner iterator because it's a generator so can't be rewound or cloned
+                $innerIterator = $this->item->getIterator()->getInnerIterator();
+                $this->itemIteratorTotal = iterator_count($innerIterator);
+            } elseif ($this->item instanceof Countable) {
+                // If the item implements Countable, use that to fetch the count
                 $this->itemIteratorTotal = count($this->item);
             } else {
+                // Otherwise we have to inspect the iterator and then rewind it
                 $this->itemIteratorTotal = iterator_count($this->itemIterator);
                 $this->itemIterator->rewind();
             }
@@ -338,8 +376,12 @@ class SSViewer_Scope
      */
     public function __call($name, $arguments)
     {
-        $on = $this->itemIterator ? $this->itemIterator->current() : $this->item;
-        $retval = $on ? $on->$name(...$arguments) : null;
+        $on = $this->getCurrentItem();
+        if ($on instanceof ViewableData && $name === 'XML_val') {
+            $retval = $on->XML_val(...$arguments);
+        } else {
+            $retval = $on ? $on->$name(...$arguments) : null;
+        }
 
         $this->resetLocalScope();
         return $retval;
@@ -367,5 +409,15 @@ class SSViewer_Scope
     protected function getUpIndex()
     {
         return $this->upIndex;
+    }
+
+    private function convertScalarToDBField(bool|string|float|int $value): DBField
+    {
+        return match (gettype($value)) {
+            'boolean' => DBBoolean::create()->setValue($value),
+            'string' => DBText::create()->setValue($value),
+            'double' => DBFloat::create()->setValue($value),
+            'integer' => DBInt::create()->setValue($value),
+        };
     }
 }

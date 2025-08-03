@@ -4,11 +4,13 @@ namespace SilverStripe\Security\SudoMode;
 
 use SilverStripe\Control\Session;
 use SilverStripe\Core\Config\Configurable;
+use SilverStripe\Core\Extensible;
 use SilverStripe\ORM\FieldType\DBDatetime;
 
 class SudoModeService implements SudoModeServiceInterface
 {
     use Configurable;
+    use Extensible;
 
     /**
      * The lifetime that sudo mode authorization lasts for, in minutes.
@@ -27,22 +29,29 @@ class SudoModeService implements SudoModeServiceInterface
 
     public function check(Session $session): bool
     {
-        $lastActivated = $session->get(self::SUDO_MODE_SESSION_KEY);
-        // Not activated at all
+        $active = true;
+        $lastActivated = $session->get(SudoModeService::SUDO_MODE_SESSION_KEY);
         if (!$lastActivated) {
-            return false;
+            // Not activated at all
+            $active = false;
+        } else {
+            // Activated within the last "lifetime" window
+            $nowTimestamp = DBDatetime::now()->getTimestamp();
+            $active = $lastActivated > ($nowTimestamp - $this->getLifetime() * 60);
         }
-
-        // Activated within the last "lifetime" window
-        $nowTimestamp = DBDatetime::now()->getTimestamp();
-
-        return $lastActivated > ($nowTimestamp - $this->getLifetime() * 60);
+        $this->extend('updateCheck', $active, $session);
+        return $active;
     }
 
     public function activate(Session $session): bool
     {
-        $session->set(self::SUDO_MODE_SESSION_KEY, DBDatetime::now()->getTimestamp());
+        $session->set(SudoModeService::SUDO_MODE_SESSION_KEY, DBDatetime::now()->getTimestamp());
         return true;
+    }
+
+    public function deactivate(Session $session): void
+    {
+        $session->set(SudoModeService::SUDO_MODE_SESSION_KEY, null);
     }
 
     public function getLifetime(): int

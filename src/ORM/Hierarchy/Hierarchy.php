@@ -16,6 +16,7 @@ use SilverStripe\Versioned\Versioned;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Convert;
 use Exception;
+use SilverStripe\Dev\Deprecation;
 use SilverStripe\View\ViewableData;
 
 /**
@@ -23,8 +24,8 @@ use SilverStripe\View\ViewableData;
  * obvious example of this is SiteTree.
  *
  * @property int $ParentID
- * @property DataObject|Hierarchy $owner
  * @method DataObject Parent()
+ * @extends DataExtension<DataObject&static>
  */
 class Hierarchy extends DataExtension
 {
@@ -115,11 +116,12 @@ class Hierarchy extends DataExtension
      * Validate the owner object - check for existence of infinite loops.
      *
      * @param ValidationResult $validationResult
+     * @deprecated 5.4.0 Will be renamed to updateValidate()
      */
     public function validate(ValidationResult $validationResult)
     {
+        Deprecation::notice('5.4.0', 'Will be renamed to updateValidate()');
         // The object is new, won't be looping.
-        /** @var DataObject|Hierarchy $owner */
         $owner = $this->owner;
         if (!$owner->ID) {
             return;
@@ -190,7 +192,7 @@ class Hierarchy extends DataExtension
     /**
      * Get the children for this DataObject filtered by canView()
      *
-     * @return SS_List
+     * @return SS_List<DataObject&static>
      */
     public function Children()
     {
@@ -212,7 +214,7 @@ class Hierarchy extends DataExtension
     /**
      * Return all children, including those 'not in menus'.
      *
-     * @return DataList
+     * @return DataList<DataObject&static>
      */
     public function AllChildren()
     {
@@ -226,7 +228,7 @@ class Hierarchy extends DataExtension
      * - Modified children will be marked as "ModifiedOnStage"
      * - Everything else has "SameOnStage" set, as an indicator that this information has been looked up.
      *
-     * @return ArrayList
+     * @return ArrayList<DataObject&static>
      */
     public function AllChildrenIncludingDeleted()
     {
@@ -252,7 +254,7 @@ class Hierarchy extends DataExtension
     /**
      * Return all the children that this page had, including pages that were deleted from both stage & live.
      *
-     * @return DataList
+     * @return DataList<DataObject&static>
      * @throws Exception
      */
     public function AllHistoricalChildren()
@@ -293,16 +295,15 @@ class Hierarchy extends DataExtension
      */
     public function numChildren($cache = true)
     {
-
         $baseClass = $this->owner->baseClass();
         $cacheType = 'numChildren';
         $id = $this->owner->ID;
 
         // cached call
         if ($cache) {
-            if (isset(self::$cache_numChildren[$baseClass][$cacheType][$id])) {
-                return self::$cache_numChildren[$baseClass][$cacheType][$id];
-            } elseif (isset(self::$cache_numChildren[$baseClass][$cacheType]['_complete'])) {
+            if (isset(Hierarchy::$cache_numChildren[$baseClass][$cacheType][$id])) {
+                return Hierarchy::$cache_numChildren[$baseClass][$cacheType][$id];
+            } elseif (isset(Hierarchy::$cache_numChildren[$baseClass][$cacheType]['_complete'])) {
                 // If the cache is complete and we didn't find our ID in the cache, it means this object is childless.
                 return 0;
             }
@@ -313,7 +314,7 @@ class Hierarchy extends DataExtension
 
         // Save if caching
         if ($cache) {
-            self::$cache_numChildren[$baseClass][$cacheType][$id] = $numChildren;
+            Hierarchy::$cache_numChildren[$baseClass][$cacheType][$id] = $numChildren;
         }
 
         return $numChildren;
@@ -335,7 +336,7 @@ class Hierarchy extends DataExtension
         if (empty($options['numChildrenMethod']) || $options['numChildrenMethod'] === 'numChildren') {
             $idList = is_array($recordList) ? $recordList :
                 ($recordList instanceof DataList ? $recordList->column('ID') : null);
-            self::prepopulate_numchildren_cache($this->getHierarchyBaseClass(), $idList);
+            Hierarchy::prepopulate_numchildren_cache($this->getHierarchyBaseClass(), $idList);
         }
 
         $this->owner->extend('onPrepopulateTreeDataCache', $recordList, $options);
@@ -355,7 +356,7 @@ class Hierarchy extends DataExtension
             return;
         }
 
-        /** @var Versioned|DataObject $singleton */
+        /** @var DataObject&static $dummyObject */
         $dummyObject = DataObject::singleton($baseClass);
         $baseTable = $dummyObject->baseTable();
 
@@ -386,11 +387,11 @@ class Hierarchy extends DataExtension
         $query->setGroupBy([Convert::symbol2sql("ParentID")]);
 
         $numChildren = $query->execute()->map();
-        self::$cache_numChildren[$baseClass]['numChildren'] = $numChildren;
+        Hierarchy::$cache_numChildren[$baseClass]['numChildren'] = $numChildren;
         if (!$idList) {
             // If all objects are being cached, mark this cache as complete
             // to avoid counting children of childless object.
-            self::$cache_numChildren[$baseClass]['numChildren']['_complete'] = true;
+            Hierarchy::$cache_numChildren[$baseClass]['numChildren']['_complete'] = true;
         }
     }
 
@@ -418,7 +419,7 @@ class Hierarchy extends DataExtension
     {
         $ancestry = ClassInfo::ancestry($this->owner);
         $ancestorClass = array_shift($ancestry);
-        while ($ancestorClass && !ViewableData::has_extension($ancestorClass, self::class)) {
+        while ($ancestorClass && !ViewableData::has_extension($ancestorClass, Hierarchy::class)) {
             $ancestorClass = array_shift($ancestry);
         }
 
@@ -431,11 +432,10 @@ class Hierarchy extends DataExtension
      * @param bool $showAll Include all of the elements, even those not shown in the menus. Only applicable when
      *                      extension is applied to {@link SiteTree}.
      * @param bool $skipParentIDFilter Set to true to suppress the ParentID and ID where statements.
-     * @return DataList
+     * @return DataList<DataObject&static>
      */
     public function stageChildren($showAll = false, $skipParentIDFilter = false)
     {
-        /** @var DataObject|Hierarchy $owner */
         $owner = $this->owner;
         $hideFromHierarchy = $owner->config()->hide_from_hierarchy;
         $hideFromCMSTree = $owner->config()->hide_from_cms_tree;
@@ -477,7 +477,7 @@ class Hierarchy extends DataExtension
      * @param bool $showAll              Include all of the elements, even those not shown in the menus. Only
      *                                   applicable when extension is applied to {@link SiteTree}.
      * @param bool $onlyDeletedFromStage Only return items that have been deleted from stage
-     * @return DataList
+     * @return DataList<DataObject&static>
      * @throws Exception
      */
     public function liveChildren($showAll = false, $onlyDeletedFromStage = false)
@@ -515,7 +515,7 @@ class Hierarchy extends DataExtension
      * is returned.
      *
      * @param string $filter
-     * @return DataObject
+     * @return DataObject&static
      */
     public function getParent($filter = null)
     {
@@ -535,7 +535,7 @@ class Hierarchy extends DataExtension
      * Return all the parents of this class in a set ordered from the closest to furtherest parent.
      *
      * @param bool $includeSelf
-     * @return ArrayList
+     * @return ArrayList<DataObject&static>
      */
     public function getAncestors($includeSelf = false)
     {
@@ -574,10 +574,13 @@ class Hierarchy extends DataExtension
      * Flush all Hierarchy caches:
      * - Children (instance)
      * - NumChildren (instance)
+     *
+     * @deprecated 5.4.0 Will be renamed to onFlushCache()
      */
     public function flushCache()
     {
+        Deprecation::notice('5.4.0', 'Will be renamed to onFlushCache()');
         $this->owner->_cache_children = null;
-        self::$cache_numChildren = [];
+        Hierarchy::$cache_numChildren = [];
     }
 }

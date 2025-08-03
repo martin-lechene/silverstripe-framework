@@ -68,6 +68,7 @@ class DataObjectTest extends SapphireTest
         DataObjectTest\OverriddenDataObject::class,
         DataObjectTest\InjectedDataObject::class,
         DataObjectTest\SettersAndGetters::class,
+        DataObjectTest\UniqueIndexObject::class,
     ];
 
     protected function setUp(): void
@@ -1907,52 +1908,124 @@ class DataObjectTest extends SapphireTest
         $this->assertEquals(2, $player->Teams()->dataQuery()->query()->unlimitedRowCount());
     }
 
+    public function provideSingularName(): array
+    {
+        return [
+            [
+                'class' => DataObjectTest\Player::class,
+                'expected' => 'Player',
+            ],
+            [
+                'class' => DataObjectTest\Team::class,
+                'expected' => 'Team',
+            ],
+            [
+                'class' => DataObjectTest\Fixture::class,
+                'expected' => 'Fixture',
+            ],
+        ];
+    }
+
     /**
      * Tests that singular_name() generates sensible defaults.
+     * @dataProvider provideSingularName
      */
-    public function testSingularName()
+    public function testSingularName(string $class, string $expected): void
     {
-        $assertions = [
-            DataObjectTest\Player::class => 'Player',
-            DataObjectTest\Team::class => 'Team',
-            DataObjectTest\Fixture::class => 'Fixture',
-        ];
+        i18n::set_locale('en_NZ');
+        /** @var DataObject $object */
+        $object = new $class();
+        $this->assertEquals(
+            $expected,
+            $object->singular_name(),
+            "Assert that the singular_name for '$class' is correct."
+        );
+        $this->assertEquals(
+            $expected,
+            $object->i18n_singular_name(),
+            "Assert that the i18n_singular_name for '$class' is correct."
+        );
+    }
 
-        foreach ($assertions as $class => $expectedSingularName) {
-            $this->assertEquals(
-                $expectedSingularName,
-                singleton($class)->singular_name(),
-                "Assert that the singular_name for '$class' is correct."
-            );
-        }
+    public function providePluralName(): array
+    {
+        return [
+            [
+                'class' => DataObjectTest\Player::class,
+                'expected' => 'Players',
+            ],
+            [
+                'class' => DataObjectTest\Team::class,
+                'expected' => 'Teams',
+            ],
+            [
+                'class' => DataObjectTest\Fixture::class,
+                'expected' => 'Fixtures',
+            ],
+            [
+                'class' => DataObjectTest\Play::class,
+                'expected' => 'Plays',
+            ],
+            [
+                'class' => DataObjectTest\Bogey::class,
+                'expected' => 'Bogeys',
+            ],
+            [
+                'class' => DataObjectTest\Ploy::class,
+                'expected' => 'Ploys',
+            ],
+        ];
     }
 
     /**
      * Tests that plural_name() generates sensible defaults.
+     * @dataProvider providePluralName
      */
-    public function testPluralName()
+    public function testPluralName(string $class, string $expected): void
     {
-        $assertions = [
-            DataObjectTest\Player::class => 'Players',
-            DataObjectTest\Team::class => 'Teams',
-            DataObjectTest\Fixture::class => 'Fixtures',
-            DataObjectTest\Play::class => 'Plays',
-            DataObjectTest\Bogey::class => 'Bogeys',
-            DataObjectTest\Ploy::class => 'Ploys',
-        ];
         i18n::set_locale('en_NZ');
-        foreach ($assertions as $class => $expectedPluralName) {
-            $this->assertEquals(
-                $expectedPluralName,
-                DataObject::singleton($class)->plural_name(),
-                "Assert that the plural_name for '$class' is correct."
-            );
-            $this->assertEquals(
-                $expectedPluralName,
-                DataObject::singleton($class)->i18n_plural_name(),
-                "Assert that the i18n_plural_name for '$class' is correct."
-            );
-        }
+        /** @var DataObject $object */
+        $object = new $class();
+        $this->assertEquals(
+            $expected,
+            $object->plural_name(),
+            "Assert that the plural_name for '$class' is correct."
+        );
+        $this->assertEquals(
+            $expected,
+            $object->i18n_plural_name(),
+            "Assert that the i18n_plural_name for '$class' is correct."
+        );
+    }
+
+    public function provideClassDescription(): array
+    {
+        return [
+            'no description by default' => [
+                'class' => DataObjectTest\Player::class,
+                'expected' => null,
+            ],
+            'explicitly set description' => [
+                'class' => DataObjectTest\Team::class,
+                'expected' => 'A team of players',
+            ],
+            'cannot inherit description from superclass' => [
+                'class' => DataObjectTest\SubTeam::class,
+                'expected' => null,
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideClassDescription
+     */
+    public function testClassDescription(string $class, ?string $expected): void
+    {
+        i18n::set_locale('en_NZ');
+        /** @var DataObject $object */
+        $object = new $class();
+        $this->assertEquals($expected, $object->classDescription());
+        $this->assertEquals($expected, $object->i18n_classDescription());
     }
 
     public function testHasDatabaseField()
@@ -2709,5 +2782,114 @@ class DataObjectTest extends SapphireTest
 
         $databaseBackedField = $method->invokeArgs($class, [$fieldPath]);
         $this->assertSame($expected, $databaseBackedField);
+    }
+
+    public function provideExceptionForUniqueIndexViolation()
+    {
+        return [
+            'violate SingleFieldIndex only' => [
+                'fieldsRecordOne' => [
+                    'SingleField' => 'Same Value',
+                    'Name' => 'Value1',
+                    'Code' => 'Value1',
+                ],
+                'fieldsRecordTwo' => [
+                    'SingleField' => 'Same Value',
+                    'Name' => 'Value2',
+                    'Code' => 'Value2',
+                ],
+                'expectedMessage' => 'Cannot create duplicate Unique Index Object with "Single field" set to "Same Value"',
+            ],
+            'violate MultiFieldIndex only' => [
+                'fieldsRecordOne' => [
+                    'SingleField' => 'Value1',
+                    'Name' => 'Name Value',
+                    'Code' => 'Code Value',
+                ],
+                'fieldsRecordTwo' => [
+                    'SingleField' => 'Value2',
+                    'Name' => 'Name Value',
+                    'Code' => 'Code Value',
+                ],
+                'expectedMessage' => 'Cannot create duplicate Unique Index Object - at least one of the following fields need to be changed: Name, Code',
+            ],
+            'violate both indexes' => [
+                'fieldsRecordOne' => [
+                    'SingleField' => 'Same Value',
+                    'Name' => 'Name Value',
+                    'Code' => 'Code Value',
+                ],
+                'fieldsRecordTwo' => [
+                    'SingleField' => 'Same Value',
+                    'Name' => 'Name Value',
+                    'Code' => 'Code Value',
+                ],
+                'expectedMessage' => 'Cannot create duplicate Unique Index Object with "Single field" set to "Same Value"',
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideExceptionForUniqueIndexViolation
+     */
+    public function testExceptionForUniqueIndexViolation(array $fieldsRecordOne, array $fieldsRecordTwo, string $expectedMessage): void
+    {
+        DataObjectTest\UniqueIndexObject::create($fieldsRecordOne)->write();
+        $record2 = DataObjectTest\UniqueIndexObject::create($fieldsRecordTwo);
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage($expectedMessage);
+        $record2->write();
+    }
+
+    public static function provideProvideI18nEntities(): array
+    {
+        return [
+            'has-class-description' => [
+                'classDescription' => 'A fluffy cloud',
+                'expected' => true,
+            ],
+            'no-class-description' => [
+                'classDescription' => null,
+                'expected' => false,
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideProvideI18nEntities
+     */
+    public function testProvideI18nEntities(?string $classDescription, bool $expected): void
+    {
+        $obj = new class extends DataObject {
+            public $classDescription;
+            public function singular_name()
+            {
+                return 'Cloud';
+            }
+            public function plural_name()
+            {
+                return 'Clouds';
+            }
+            public function classDescription()
+            {
+                return $this->classDescription;
+            }
+        };
+        $obj->classDescription = $classDescription;
+        $entities = $obj->provideI18nEntities();
+        // Fix up anonymous class keys
+        foreach ($entities as $key => $entity) {
+            unset($entities[$key]);
+            $newKey = preg_replace('#^.+?\.([A-Z_]+)$#', '$1', $key);
+            $entities[$newKey] = $entity;
+        }
+        $this->assertSame('Cloud', $entities['SINGULARNAME']);
+        $this->assertSame('Clouds', $entities['PLURALNAME']);
+        $this->assertSame(['one' => 'A Cloud', 'other' => '{count} Clouds'], $entities['PLURALS']);
+        if ($expected) {
+            $this->assertSame('A fluffy cloud', $entities['CLASS_DESCRIPTION']);
+        } else {
+            $this->assertFalse(array_key_exists('CLASS_DESCRIPTION', $entities));
+        }
     }
 }

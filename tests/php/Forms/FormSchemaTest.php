@@ -150,7 +150,7 @@ class FormSchemaTest extends SapphireTest
             'Title' => null,
             ]
         );
-        $this->assertFalse($form->validationResult()->isValid());
+        $this->assertFalse($form->validate()->isValid());
         $formSchema = new FormSchema();
         $expected = [
             'id' => 'Form_TestForm',

@@ -3,11 +3,12 @@
 namespace SilverStripe\Forms;
 
 use SilverStripe\ORM\ArrayList;
+use SilverStripe\Dev\Deprecation;
 
 /**
  * A list designed to hold form field instances.
  *
- * @method FormField[] getIterator()
+ * @extends ArrayList<FormField>
  */
 class FieldList extends ArrayList
 {
@@ -65,7 +66,6 @@ class FieldList extends ArrayList
     {
         $stack = $this->toArray();
         while (!empty($stack)) {
-            /** @var FormField $field */
             $field = array_shift($stack);
             $callback($field);
             if ($field instanceof CompositeField) {
@@ -219,6 +219,10 @@ class FieldList extends ArrayList
      */
     public function addFieldsToTab($tabName, $fields, $insertBefore = null)
     {
+        if (!is_array($fields)) {
+            Deprecation::notice('5.3.0', '$fields will need to be passed as an array in CMS 6', Deprecation::SCOPE_METHOD);
+        }
+
         $this->flushFieldsCache();
 
         // Find the tab
@@ -271,6 +275,10 @@ class FieldList extends ArrayList
      */
     public function removeFieldsFromTab($tabName, $fields)
     {
+        if (!is_array($fields)) {
+            Deprecation::notice('5.3.0', '$fields will need to be passed as an array in CMS 6', Deprecation::SCOPE_METHOD);
+        }
+
         $this->flushFieldsCache();
 
         // Find the tab
@@ -395,13 +403,13 @@ class FieldList extends ArrayList
     public function findTab($tabName)
     {
         $parts = explode('.', $tabName ?? '');
-        $last_idx = count($parts ?? []) - 1;
 
         $currentPointer = $this;
 
         foreach ($parts as $k => $part) {
-            $parentPointer = $currentPointer;
-            /** @var FormField $currentPointer */
+            if ($currentPointer === null) {
+                return null;
+            }
             $currentPointer = $currentPointer->fieldByName($part);
         }
 
@@ -428,7 +436,6 @@ class FieldList extends ArrayList
         $currentPointer = $this;
         foreach ($parts as $k => $part) {
             $parentPointer = $currentPointer;
-            /** @var FormField $currentPointer */
             $currentPointer = $currentPointer->fieldByName($part);
             // Create any missing tabs
             if (!$currentPointer) {

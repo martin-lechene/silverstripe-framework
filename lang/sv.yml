@@ -57,7 +57,6 @@ sv:
     VALIDATIONPASSWORDSDONTMATCH: 'Lösenorden stämmer inte överrens '
     VALIDATIONPASSWORDSNOTEMPTY: 'Lösenordfältet får inte vara tomt'
     VALIDATIONSTRONGPASSWORD: 'Lösenord måste innehålla minst en siffra och en bokstav.'
-    VALIDATOR: Validator
     VALIDCURRENCY: 'Var vänlig ange en korrekt valuta'
   SilverStripe\Forms\FormField:
     EXAMPLE: 't.ex. {format}'
@@ -96,6 +95,8 @@ sv:
     Saved: 'Sparade {name} {link}'
   SilverStripe\Forms\GridField\GridFieldEditButton:
     EDIT: Ändra
+  SilverStripe\Forms\GridField\GridFieldFilterHeader:
+    Search_Default: Sök
   SilverStripe\Forms\GridField\GridFieldGroupDeleteAction:
     UnlinkSelfFailure: 'Du kan inte radera dig själv från den här gruppen, då du då kommer att förlora dina admin-rättigheter'
   SilverStripe\Forms\GridField\GridFieldPaginator:
@@ -113,12 +114,16 @@ sv:
   SilverStripe\Forms\NullableField:
     IsNullLabel: 'Är NULL'
   SilverStripe\Forms\NumericField:
-    VALIDATION: '''{value}'' är inget nummer, bara siffror (utan mellanslag) kan accepteras för det här fältet'
+    VALIDATION: "'{value}' är inget nummer, bara siffror (utan mellanslag) kan accepteras för det här fältet"
   SilverStripe\Forms\TextField:
     VALIDATEMAXLENGTH: 'Värdet för {name} får inte överstiga {MaxLength} tecken'
   SilverStripe\Forms\TimeField:
     VALIDATEFORMAT: 'Var god att ange tid i ett giltigt format ({format})'
+  SilverStripe\Forms\UrlField:
+    INVALID: 'Var vänlig och ange en korrekt URL'
   SilverStripe\ORM\DataObject:
+    FILTER_WITHINRANGE_FROM: Från
+    FILTER_WITHINRANGE_TO: Till
     PLURALNAME: Dataobjekt
     PLURALS:
       one: 'Ett dataobjekt'
@@ -219,8 +224,6 @@ sv:
       one: 'Ett inloggningsförsök'
       other: '{count} inloggningsförsök'
     SINGULARNAME: Inloggningsförsök
-    Status: Status
-    db_Status: Status
     has_one_Member: Medlem
   SilverStripe\Security\Member:
     ADDGROUP: 'Lägg till grupp'
@@ -338,3 +341,8 @@ sv:
     NOTERESETPASSWORD: 'Ange din e-postadress så skickar vi en länk med vilken du kan återställa ditt lösenord'
     PASSWORDRESETSENTHEADER: 'Återställningslänk för lösenord skickad'
     PASSWORDRESETSENTTEXT: 'Tack. En återställningslänk har skickats, förutsatt att ett konto med denna adress existerar.'
+  SilverStripe\Security\Validation\PasswordValidator:
+    PREVPASSWORD: 'Du har redan använt samma lösenord tidigare, var god och välj ett nytt lösenord'
+  SilverStripe\Security\Validation\RulesPasswordValidator:
+    LOWCHARSTRENGTH: 'Var god och stärk ditt lösenord genom att lägga till något av följande tecken: {chars}'
+    TOOSHORT: 'Lösenordet är för kort, det måste innehålla {minimum} eller fler tecken.'

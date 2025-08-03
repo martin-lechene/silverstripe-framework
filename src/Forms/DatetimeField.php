@@ -75,6 +75,7 @@ class DatetimeField extends TextField
      * to detect invalid values.
      *
      * @var mixed
+     * @deprecated 5.4.0 Use $value instead
      */
     protected $rawValue = null;
 

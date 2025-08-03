@@ -33,25 +33,27 @@ class MemberAuthenticator implements Authenticator
 
     public function authenticate(array $data, HTTPRequest $request, ValidationResult &$result = null)
     {
-        // Find authenticated member
-        if (class_exists(Versioned::class)) {
-            [$member, $result] = Versioned::withVersionedMode(function () use ($data) {
-                Versioned::set_stage(Versioned::DRAFT);
+        return Security::withMinimumExecutionTime(function () use ($data, $request, &$result) {
+            // Find authenticated member
+            if (class_exists(Versioned::class)) {
+                [$member, $result] = Versioned::withVersionedMode(function () use ($data) {
+                    Versioned::set_stage(Versioned::DRAFT);
+                    $member = $this->authenticateMember($data, $result);
+                    return [$member, $result];
+                });
+            } else {
                 $member = $this->authenticateMember($data, $result);
-                return [$member, $result];
-            });
-        } else {
-            $member = $this->authenticateMember($data, $result);
-        }
+            }
 
-        // Optionally record every login attempt as a {@link LoginAttempt} object
-        $this->recordLoginAttempt($data, $request, $member, $result->isValid());
+            // Optionally record every login attempt as a {@link LoginAttempt} object
+            $this->recordLoginAttempt($data, $request, $member, $result->isValid());
 
-        if ($member && $request->hasSession()) {
-            $request->getSession()->clear('BackURL');
-        }
+            if ($member && $request->hasSession()) {
+                $request->getSession()->clear('BackURL');
+            }
 
-        return $result->isValid() ? $member : null;
+            return $result->isValid() ? $member : null;
+        });
     }
 
     /**
@@ -90,7 +92,6 @@ class MemberAuthenticator implements Authenticator
         if (!$member && $email) {
             // Find user by email
             $identifierField = Member::config()->get('unique_identifier_field');
-            /** @var Member $member */
             $member = Member::get()
                 ->filter([$identifierField => $email])
                 ->first();

@@ -23,11 +23,15 @@ pl_PL:
     Save: Zapisz
   SilverStripe\Forms\GridField\GridFieldEditButton:
     EDIT: Edytuj
+  SilverStripe\Forms\GridField\GridFieldFilterHeader:
+    Search_Default: Szukaj
   SilverStripe\Forms\GridField\GridFieldPaginator:
     Page: Strona
-    View: View
-  SilverStripe\Forms\GridField\GridFieldViewButton:
-    VIEW: View
+  SilverStripe\Forms\UrlField:
+    INVALID: 'Wprowadź poprawny adres URL'
+  SilverStripe\ORM\DataObject:
+    FILTER_WITHINRANGE_FROM: Od
+    FILTER_WITHINRANGE_TO: Do
   SilverStripe\ORM\FieldType\DBBoolean:
     ANY: Jakikolwiek
     NOANSWER: Nie

@@ -10,10 +10,12 @@ use SilverStripe\View\Parsers\HTMLValue;
 
 class HTMLEditorSanitiserTest extends FunctionalTest
 {
+    // This is the backspace character. It needs to be escaped in double-quotes.
+    private const CHAR_BACKSPACE = "\x08";
 
-    public function testSanitisation()
+    public function provideSanitise(): array
     {
-        $tests = [
+        return [
             [
                 'p,strong',
                 '<p>Leave Alone</p><div>Strip parent<strong>But keep children</strong> in order</div>',
@@ -82,6 +84,18 @@ class HTMLEditorSanitiserTest extends FunctionalTest
             ],
             [
                 'a[href|target|rel]',
+                '<a href="' . HTMLEditorSanitiserTest::CHAR_BACKSPACE . 'javascript:alert(0);">Test</a>',
+                '<a>Test</a>',
+                'Javascript in the href attribute with leading backspace of a link is completely removed'
+            ],
+            [
+                'a[href|target|rel]',
+                '<a href="javascript:alert(0);' . HTMLEditorSanitiserTest::CHAR_BACKSPACE . '">Test</a>',
+                '<a>Test</a>',
+                'Javascript in the href attribute with backspace in middle of a link is completely removed'
+            ],
+            [
+                'a[href|target|rel]',
                 '<a href="' . implode("\n", str_split(' javascript:')) . '">Test</a>',
                 '<a>Test</a>',
                 'Javascript in the href attribute of a link is completely removed even for multiline markup'
@@ -111,6 +125,12 @@ class HTMLEditorSanitiserTest extends FunctionalTest
                 'Javascript with tab elements the src attribute of an iframe is completely removed'
             ],
             [
+                'iframe[src]',
+                '<iframe src="' . HTMLEditorSanitiserTest::CHAR_BACKSPACE . 'javascript:alert(0);"></iframe>',
+                '<iframe></iframe>',
+                'Javascript in the src attribute of an iframe with a backspace is completely removed'
+            ],
+            [
                 'object[data]',
                 '<object data="OK"></object>',
                 '<object data="OK"></object>',
@@ -120,7 +140,37 @@ class HTMLEditorSanitiserTest extends FunctionalTest
                 'object[data]',
                 '<object data=javascript:alert()>',
                 '<object></object>',
-                'Object with dangerous content in data attribute is completely removed'
+                'Object with dangerous javascript content in data attribute is completely removed'
+            ],
+            [
+                'object[data]',
+                '<object data="javascript:alert()">',
+                '<object></object>',
+                'Object with dangerous javascript content in data attribute with quotes is completely removed'
+            ],
+            [
+                'object[data]',
+                '<object data="' . HTMLEditorSanitiserTest::CHAR_BACKSPACE . 'javascript:alert()">',
+                '<object></object>',
+                'Object with dangerous javascript content in data attribute with backspace is completely removed'
+            ],
+            [
+                'object[data]',
+                '<object data="data:text/html;base64,PHNjcmlwdD5hbGVydChkb2N1bWVudC5sb2NhdGlvbik8L3NjcmlwdD4=">',
+                '<object></object>',
+                'Object with dangerous html content in data attribute is completely removed'
+            ],
+            [
+                'object[data]',
+                '<object data="' . implode("\n", str_split(' DATA:TEXT/HTML;')) . 'base64,PHNjcmlwdD5hbGVydChkb2N1bWVudC5sb2NhdGlvbik8L3NjcmlwdD4=">',
+                '<object></object>',
+                'Object with split upper-case dangerous html content in data attribute is completely removed'
+            ],
+            [
+                'object[data]',
+                '<object data="data:text/xml;base64,PHNjcmlwdD5hbGVydChkb2N1bWVudC5sb2NhdGlvbik8L3NjcmlwdD4=">',
+                '<object data="data:text/xml;base64,PHNjcmlwdD5hbGVydChkb2N1bWVudC5sb2NhdGlvbik8L3NjcmlwdD4="></object>',
+                'Object with safe xml content in data attribute is retained'
             ],
             [
                 'img[src]',
@@ -129,13 +179,20 @@ class HTMLEditorSanitiserTest extends FunctionalTest
                 'XSS vulnerable attributes starting with on or style are removed via configuration'
             ],
         ];
+    }
 
-        $config = HTMLEditorConfig::get('htmleditorsanitisertest');
-
-        foreach ($tests as $test) {
-            list($validElements, $input, $output, $desc) = $test;
-
-            $config->setOptions(['valid_elements' => $validElements]);
+    /**
+     * @dataProvider provideSanitise
+     */
+    public function testSanitisation(string $validElements, string $input, string $output, string $desc): void
+    {
+        foreach (['valid_elements', 'extended_valid_elements'] as $configType) {
+            $config = HTMLEditorConfig::get('htmleditorsanitisertest_' . $configType);
+            $config->setOptions([$configType => $validElements]);
+            // Remove default valid elements if we're testing extended valid elements
+            if ($configType !== 'valid_elements') {
+                $config->setOptions(['valid_elements' => '']);
+            }
             $sanitiser = new HtmlEditorSanitiser($config);
 
             $value = 'noopener noreferrer';
@@ -144,12 +201,30 @@ class HTMLEditorSanitiserTest extends FunctionalTest
             } elseif (strpos($desc ?? '', 'link_rel_value is null') !== false) {
                 $value = null;
             }
-            Config::inst()->set(HTMLEditorSanitiser::class, 'link_rel_value', $value);
+
+            HTMLEditorSanitiser::config()->set('link_rel_value', $value);
 
             $htmlValue = HTMLValue::create($input);
             $sanitiser->sanitise($htmlValue);
 
-            $this->assertEquals($output, $htmlValue->getContent(), $desc);
+            $this->assertEquals($output, $htmlValue->getContent(), "{$desc} - using config type: {$configType}");
         }
+    }
+
+    /**
+     * Ensure that when there are no valid elements at all for a configuration set,
+     * nothing is allowed.
+     */
+    public function testSanitiseNoValidElements(): void
+    {
+        $config = HTMLEditorConfig::get('htmleditorsanitisertest');
+        $config->setOptions(['valid_elements' => '']);
+        $config->setOptions(['extended_valid_elements' => '']);
+        $sanitiser = new HtmlEditorSanitiser($config);
+
+        $htmlValue = HTMLValue::create('<p>standard text</p><table><tbody><tr><th><a href="some-link">text</a></th></tr><tr><td>Header</td></tr></tbody></table>');
+        $sanitiser->sanitise($htmlValue);
+
+        $this->assertEquals('standard texttextHeader', $htmlValue->getContent());
     }
 }

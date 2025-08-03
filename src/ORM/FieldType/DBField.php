@@ -122,6 +122,7 @@ abstract class DBField extends ViewableData implements DBIndexable
      * @var $default mixed Default-value in the database.
      * Might be overridden on DataObject-level, but still useful for setting defaults on
      * already existing records after a db-build.
+     * @deprecated 5.4.0 Use getDefaultValue() and setDefaultValue() instead
      */
     protected $defaultVal;
 
@@ -540,7 +541,7 @@ abstract class DBField extends ViewableData implements DBIndexable
                 "DBField::saveInto() Called on a nameless '" . static::class . "' object"
             );
         }
-        if ($this->value instanceof self) {
+        if ($this->value instanceof DBField) {
             $this->value->saveInto($dataObject);
         } else {
             $dataObject->__set($fieldName, $this->value);

@@ -78,7 +78,18 @@ abstract class SQLConditionalExpression extends SQLExpression
         if (is_array($from)) {
             $this->from = array_merge($this->from, $from);
         } elseif (!empty($from)) {
-            $this->from[str_replace(['"','`'], '', $from)] = $from;
+            // Check if the from clause looks like a regular table name
+            // Table name most be an uninterrupted string, with no spaces.
+            // It may be padded with spaces. e.g. ` TableName ` will be
+            // treated as Table Name, but not ` Table Name `.
+            if (preg_match('/^\s*[^\s]+\s*$/', $from)) {
+                // Add an alias for the table name, stripping any quotes
+                $this->from[str_replace(['"','`'], '', $from)] = $from;
+            } else {
+                // Add from clause without an alias - this is probably a full
+                // sub-select with its own explicit alias.
+                $this->from[] = $from;
+            }
         }
 
         return $this;
@@ -241,7 +252,7 @@ abstract class SQLConditionalExpression extends SQLExpression
         foreach ($this->from as $key => $tableClause) {
             if (is_array($tableClause)) {
                 $table = '"' . $tableClause['table'] . '"';
-            } elseif (is_string($tableClause) && preg_match(self::getJoinRegex(), $tableClause ?? '', $matches)) {
+            } elseif (is_string($tableClause) && preg_match(SQLConditionalExpression::getJoinRegex(), $tableClause ?? '', $matches)) {
                 $table = $matches[1];
             } else {
                 $table = $tableClause;
@@ -341,7 +352,7 @@ abstract class SQLConditionalExpression extends SQLExpression
         // Remove the regular FROM tables out so we only deal with the JOINs
         $regularTables = [];
         foreach ($from as $alias => $tableClause) {
-            if (is_string($tableClause) && !preg_match(self::getJoinRegex(), $tableClause)) {
+            if (is_string($tableClause) && !preg_match(SQLConditionalExpression::getJoinRegex(), $tableClause)) {
                 $regularTables[$alias] = $tableClause;
                 unset($from[$alias]);
             }

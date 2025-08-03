@@ -68,6 +68,7 @@ class DB
 
     /**
      * Internal flag to keep track of when db connection was attempted.
+     * @deprecated 5.4.0 Will be removed without equivalent functionality in a future major release.
      */
     private static $connection_attempted = false;
 
@@ -84,7 +85,7 @@ class DB
      */
     public static function set_conn(Database $connection, $name = 'default')
     {
-        self::$connections[$name] = $connection;
+        DB::$connections[$name] = $connection;
     }
 
     /**
@@ -96,8 +97,8 @@ class DB
      */
     public static function get_conn($name = 'default')
     {
-        if (isset(self::$connections[$name])) {
-            return self::$connections[$name];
+        if (isset(DB::$connections[$name])) {
+            return DB::$connections[$name];
         }
 
         // lazy connect
@@ -118,7 +119,7 @@ class DB
      */
     public static function get_schema($name = 'default')
     {
-        $connection = self::get_conn($name);
+        $connection = DB::get_conn($name);
         if ($connection) {
             return $connection->getSchemaManager();
         }
@@ -136,7 +137,7 @@ class DB
      */
     public static function build_sql(SQLExpression $expression, &$parameters, $name = 'default')
     {
-        $connection = self::get_conn($name);
+        $connection = DB::get_conn($name);
         if ($connection) {
             return $connection->getQueryBuilder()->buildSQL($expression, $parameters);
         } else {
@@ -154,7 +155,7 @@ class DB
      */
     public static function get_connector($name = 'default')
     {
-        $connection = self::get_conn($name);
+        $connection = DB::get_conn($name);
         if ($connection) {
             return $connection->getConnector();
         }
@@ -187,7 +188,7 @@ class DB
             return;
         }
         // Validate name
-        if ($name && !self::valid_alternative_database_name($name)) {
+        if ($name && !DB::valid_alternative_database_name($name)) {
             throw new InvalidArgumentException(sprintf(
                 'Invalid alternative database name: "%s"',
                 $name
@@ -198,12 +199,11 @@ class DB
         if (!Injector::inst()->has(HTTPRequest::class)) {
             return;
         }
-        /** @var HTTPRequest $request */
         $request = Injector::inst()->get(HTTPRequest::class);
         if ($name) {
-            $request->getSession()->set(self::ALT_DB_KEY, $name);
+            $request->getSession()->set(DB::ALT_DB_KEY, $name);
         } else {
-            $request->getSession()->clear(self::ALT_DB_KEY);
+            $request->getSession()->clear(DB::ALT_DB_KEY);
         }
     }
 
@@ -226,15 +226,14 @@ class DB
         if (!Injector::inst()->has(HTTPRequest::class)) {
             return null;
         }
-        /** @var HTTPRequest $request */
         $request = Injector::inst()->get(HTTPRequest::class);
         // Skip if the session hasn't been started
         if (!$request->getSession()->isStarted()) {
             return null;
         }
 
-        $name = $request->getSession()->get(self::ALT_DB_KEY);
-        if (self::valid_alternative_database_name($name)) {
+        $name = $request->getSession()->get(DB::ALT_DB_KEY);
+        if (DB::valid_alternative_database_name($name)) {
             return $name;
         }
 
@@ -273,7 +272,7 @@ class DB
     public static function connect($databaseConfig, $label = 'default')
     {
         // This is used by the "testsession" module to test up a test session using an alternative name
-        if ($name = self::get_alternative_database_name()) {
+        if ($name = DB::get_alternative_database_name()) {
             $databaseConfig['database'] = $name;
         }
 
@@ -281,14 +280,14 @@ class DB
             throw new InvalidArgumentException("DB::connect: Not passed a valid database config");
         }
 
-        self::$connection_attempted = true;
+        DB::$connection_attempted = true;
 
         $dbClass = $databaseConfig['type'];
 
         // Using Injector->create allows us to use registered configurations
         // which may or may not map to explicit objects
         $conn = Injector::inst()->create($dbClass);
-        self::set_conn($conn, $label);
+        DB::set_conn($conn, $label);
         $conn->connect($databaseConfig);
 
         return $conn;
@@ -325,7 +324,7 @@ class DB
      */
     public static function connection_attempted()
     {
-        return self::$connection_attempted;
+        return DB::$connection_attempted;
     }
 
     /**
@@ -336,9 +335,9 @@ class DB
      */
     public static function query($sql, $errorLevel = E_USER_ERROR)
     {
-        self::$lastQuery = $sql;
+        DB::$lastQuery = $sql;
 
-        return self::get_conn()->query($sql, $errorLevel);
+        return DB::get_conn()->query($sql, $errorLevel);
     }
 
     /**
@@ -428,9 +427,9 @@ class DB
      */
     public static function prepared_query($sql, $parameters, $errorLevel = E_USER_ERROR)
     {
-        self::$lastQuery = $sql;
+        DB::$lastQuery = $sql;
 
-        return self::get_conn()->preparedQuery($sql, $parameters, $errorLevel);
+        return DB::get_conn()->preparedQuery($sql, $parameters, $errorLevel);
     }
 
     /**
@@ -475,8 +474,8 @@ class DB
      */
     public static function manipulate($manipulation)
     {
-        self::$lastQuery = $manipulation;
-        self::get_conn()->manipulate($manipulation);
+        DB::$lastQuery = $manipulation;
+        DB::get_conn()->manipulate($manipulation);
     }
 
     /**
@@ -487,7 +486,7 @@ class DB
      */
     public static function get_generated_id($table)
     {
-        return self::get_conn()->getGeneratedID($table);
+        return DB::get_conn()->getGeneratedID($table);
     }
 
     /**
@@ -497,7 +496,7 @@ class DB
      */
     public static function is_active()
     {
-        return ($conn = self::get_conn()) && $conn->isActive();
+        return ($conn = DB::get_conn()) && $conn->isActive();
     }
 
     /**
@@ -510,7 +509,7 @@ class DB
      */
     public static function create_database($database)
     {
-        return self::get_conn()->selectDatabase($database, true);
+        return DB::get_conn()->selectDatabase($database, true);
     }
 
     /**
@@ -533,7 +532,7 @@ class DB
         $options = null,
         $advancedOptions = null
     ) {
-        return self::get_schema()->createTable($table, $fields, $indexes, $options, $advancedOptions);
+        return DB::get_schema()->createTable($table, $fields, $indexes, $options, $advancedOptions);
     }
 
     /**
@@ -544,7 +543,7 @@ class DB
      */
     public static function create_field($table, $field, $spec)
     {
-        return self::get_schema()->createField($table, $field, $spec);
+        return DB::get_schema()->createField($table, $field, $spec);
     }
 
     /**
@@ -570,7 +569,7 @@ class DB
         $options = null,
         $extensions = null
     ) {
-        self::get_schema()->requireTable($table, $fieldSchema, $indexSchema, $hasAutoIncPK, $options, $extensions);
+        DB::get_schema()->requireTable($table, $fieldSchema, $indexSchema, $hasAutoIncPK, $options, $extensions);
     }
 
     /**
@@ -582,7 +581,7 @@ class DB
      */
     public static function require_field($table, $field, $spec)
     {
-        self::get_schema()->requireField($table, $field, $spec);
+        DB::get_schema()->requireField($table, $field, $spec);
     }
 
     /**
@@ -594,7 +593,7 @@ class DB
      */
     public static function require_index($table, $index, $spec)
     {
-        self::get_schema()->requireIndex($table, $index, $spec);
+        DB::get_schema()->requireIndex($table, $index, $spec);
     }
 
     /**
@@ -604,7 +603,7 @@ class DB
      */
     public static function dont_require_table($table)
     {
-        self::get_schema()->dontRequireTable($table);
+        DB::get_schema()->dontRequireTable($table);
     }
 
     /**
@@ -615,7 +614,7 @@ class DB
      */
     public static function dont_require_field($table, $fieldName)
     {
-        self::get_schema()->dontRequireField($table, $fieldName);
+        DB::get_schema()->dontRequireField($table, $fieldName);
     }
 
     /**
@@ -626,7 +625,7 @@ class DB
      */
     public static function check_and_repair_table($table)
     {
-        return self::get_schema()->checkAndRepairTable($table);
+        return DB::get_schema()->checkAndRepairTable($table);
     }
 
     /**
@@ -636,7 +635,7 @@ class DB
      */
     public static function affected_rows()
     {
-        return self::get_conn()->affectedRows();
+        return DB::get_conn()->affectedRows();
     }
 
     /**
@@ -647,7 +646,7 @@ class DB
      */
     public static function table_list()
     {
-        return self::get_schema()->tableList();
+        return DB::get_schema()->tableList();
     }
 
     /**
@@ -659,7 +658,7 @@ class DB
      */
     public static function field_list($table)
     {
-        return self::get_schema()->fieldList($table);
+        return DB::get_schema()->fieldList($table);
     }
 
     /**
@@ -669,7 +668,7 @@ class DB
      */
     public static function quiet($quiet = true)
     {
-        self::get_schema()->quiet($quiet);
+        DB::get_schema()->quiet($quiet);
     }
 
     /**
@@ -680,6 +679,6 @@ class DB
      */
     public static function alteration_message($message, $type = "")
     {
-        self::get_schema()->alterationMessage($message, $type);
+        DB::get_schema()->alterationMessage($message, $type);
     }
 }

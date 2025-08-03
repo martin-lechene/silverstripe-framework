@@ -92,3 +92,6 @@
   delocalemember:
     Email: delocalemember@test.com
     Locale: de_DE
+  username-member:
+    Email: username@member.com
+    Username: username1234

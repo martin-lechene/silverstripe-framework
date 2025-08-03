@@ -13,6 +13,7 @@ use SilverStripe\ORM\FieldType\DBField;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Security\Authenticator;
 use SilverStripe\Security\IdentityStore;
+use SilverStripe\Security\LoginAttempt;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Security;
 
@@ -66,7 +67,6 @@ class ChangePasswordHandler extends RequestHandler
         $request = $this->getRequest();
 
         // Extract the member from the URL.
-        /** @var Member $member */
         $member = null;
         if ($request->getVar('m') !== null) {
             $member = Member::get()->filter(['ID' => (int)$request->getVar('m')])->first();
@@ -153,7 +153,6 @@ class ChangePasswordHandler extends RequestHandler
     {
         // if there is a current member, they should be logged out
         if ($curMember = Security::getCurrentUser()) {
-            /** @var LogoutHandler $handler */
             Injector::inst()->get(IdentityStore::class)->logOut();
         }
 
@@ -269,13 +268,27 @@ class ChangePasswordHandler extends RequestHandler
         // Clear locked out status
         $member->LockedOutUntil = null;
         $member->FailedLoginCount = null;
+
+        // Create a successful 'LoginAttempt' as the password is reset
+        if (Security::config()->get('login_recording')) {
+            $loginAttempt = LoginAttempt::create();
+            $loginAttempt->Status = LoginAttempt::SUCCESS;
+            $loginAttempt->MemberID = $member->ID;
+
+            if ($member->Email) {
+                $loginAttempt->setEmail($member->Email);
+            }
+
+            $loginAttempt->IP = $this->getRequest()->getIP();
+            $loginAttempt->write();
+        }
+
         // Clear the members login hashes
         $member->AutoLoginHash = null;
         $member->AutoLoginExpired = DBDatetime::create()->now();
         $member->write();
 
         if ($member->canLogin()) {
-            /** @var IdentityStore $identityStore */
             $identityStore = Injector::inst()->get(IdentityStore::class);
             $identityStore->logIn($member, false, $this->getRequest());
         }

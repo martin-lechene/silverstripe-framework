@@ -8,6 +8,12 @@ use IteratorAggregate;
 
 /**
  * An interface that a class can implement to be treated as a list container.
+ *
+ * @template T
+ * @extends ArrayAccess<array-key, T>
+ * @extends IteratorAggregate<array-key, T>
+ *
+ * @deprecated 5.4.0 Will be renamed to SilverStripe\Model\List\SS_List
  */
 interface SS_List extends ArrayAccess, Countable, IteratorAggregate
 {
@@ -15,7 +21,7 @@ interface SS_List extends ArrayAccess, Countable, IteratorAggregate
     /**
      * Returns all the items in the list in an array.
      *
-     * @return array
+     * @return array<T>
      */
     public function toArray();
 
@@ -44,14 +50,14 @@ interface SS_List extends ArrayAccess, Countable, IteratorAggregate
     /**
      * Returns the first item in the list.
      *
-     * @return mixed
+     * @return T|null
      */
     public function first();
 
     /**
      * Returns the last item in the list.
      *
-     * @return mixed
+     * @return T|null
      */
     public function last();
 
@@ -71,7 +77,7 @@ interface SS_List extends ArrayAccess, Countable, IteratorAggregate
      *
      * @param  string $key
      * @param  mixed $value
-     * @return mixed
+     * @return T|null
      */
     public function find($key, $value);
 
@@ -87,7 +93,7 @@ interface SS_List extends ArrayAccess, Countable, IteratorAggregate
      * Walks the list using the specified callback
      *
      * @param callable $callback
-     * @return $this
+     * @return static<T>
      */
     public function each($callback);
 }
