@@ -92,7 +92,10 @@ da:
     Search_Default: Søg
   SilverStripe\Forms\GridField\GridFieldGroupDeleteAction:
     UnlinkSelfFailure: 'Kan ikke fjerne dig selv fra denne gruppe, du vil miste administrator rettigheder'
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Luk
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Næste
     OF: af
     Page: Side
     View: Vis

@@ -29,8 +29,12 @@ hu:
     EDIT: Szerkeszt
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Keresés
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Bezár
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Következő
     Page: Oldal
+    Previous: Előző
   SilverStripe\Forms\UrlField:
     INVALID: 'Kérjük adjon meg egy működő linket'
   SilverStripe\ORM\DataObject:

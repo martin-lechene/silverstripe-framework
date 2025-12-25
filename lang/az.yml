@@ -33,8 +33,12 @@ az:
     Save: 'Yadda saxla'
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Axtar
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Bağla
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Sonrakı
     Page: Səhifə
+    Previous: Əvvəlki
   SilverStripe\Forms\MoneyField:
     FIELDLABELAMOUNT: Miqdar
     FIELDLABELCURRENCY: Valyuta

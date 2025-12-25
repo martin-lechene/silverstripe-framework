@@ -76,9 +76,13 @@ ja:
     EDIT: 編集
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: 検索
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: 閉じる
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: 次へ
     OF: の
     Page: ページ
+    Previous: 前へ
   SilverStripe\Forms\MoneyField:
     FIELDLABELAMOUNT: 総計
     FIELDLABELCURRENCY: 通貨

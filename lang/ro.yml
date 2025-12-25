@@ -39,8 +39,12 @@ ro:
     EDIT: Editare
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Căutare
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Închide
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Urmatorul
     Page: Pagină
+    Previous: Anteriorul
   SilverStripe\Forms\UrlField:
     INVALID: 'Vă rugăm să introduceți un URL valid'
   SilverStripe\ORM\DataObject:

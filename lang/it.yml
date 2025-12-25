@@ -142,9 +142,13 @@ it:
     Search_Default: Cerca
   SilverStripe\Forms\GridField\GridFieldGroupDeleteAction:
     UnlinkSelfFailure: 'Non è possibile rimuovere te stesso da questo gruppo, perderesti i diritti di admin'
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Chiudi
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Seguente
     OF: di
     Page: Pagina
+    Previous: Precedente
     View: Visualizza
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Visualizza

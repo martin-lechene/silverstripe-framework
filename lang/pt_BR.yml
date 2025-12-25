@@ -37,7 +37,9 @@ pt_BR:
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Buscar
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Próximo
     Page: Página
+    Previous: Anterior
   SilverStripe\ORM\DataObject:
     PLURALNAME: 'Dados dos objetos'
     SINGULARNAME: 'Dado do objeto'

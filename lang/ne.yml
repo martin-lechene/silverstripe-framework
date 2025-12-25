@@ -16,7 +16,9 @@ ne:
   SilverStripe\Forms\FormScaffolder:
     TABMAIN: मुख्य
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: पछीको
     Page: पेज
+    Previous: पहिलाको
   SilverStripe\Security\BasicAuth:
     ENTERINFO: 'कृपया एउता प्रयोगकता नाम र पासओड हल्नुहोस्'
     ERRORNOTADMIN: 'यो प्रयोगकता मुख्य प्रयोगकता होइन'

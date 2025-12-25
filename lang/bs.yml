@@ -36,7 +36,9 @@ bs:
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Pretraga
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Slijedeći
     Page: Stranica
+    Previous: Prethodni
   SilverStripe\ORM\FieldType\DBBoolean:
     ANY: 'Bilo koji'
     NOANSWER: Ne

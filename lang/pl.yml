@@ -121,9 +121,13 @@ pl:
     Search_Default: Szukaj
   SilverStripe\Forms\GridField\GridFieldGroupDeleteAction:
     UnlinkSelfFailure: 'Nie możesz usunąć siebie z tej grupy, stracone zostałby prawa administratora'
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Zamknij
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Następny
     OF: z
     Page: Strona
+    Previous: Poprzedni
     View: Widok
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Widok

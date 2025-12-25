@@ -81,9 +81,13 @@ ar:
     EDIT: تحرير
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: بحث
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: إغلاق
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: التالي
     OF: من
     Page: صفحة
+    Previous: السابق
     View: عرض
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: عرض

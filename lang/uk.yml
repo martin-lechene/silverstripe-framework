@@ -40,8 +40,12 @@ uk:
     Saved: 'Збережено {name} {link}'
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Пошук
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Закрити
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Наступна
     Page: Сторінка
+    Previous: Попередня
   SilverStripe\Forms\MoneyField:
     FIELDLABELAMOUNT: Кількість
     FIELDLABELCURRENCY: Валюта

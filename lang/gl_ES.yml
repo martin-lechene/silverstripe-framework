@@ -47,8 +47,12 @@ gl_ES:
     Delete: Eliminar
     DeletePermissionsFailure: 'Non eliminar permisos'
     Save: Gardar
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Pechar
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Seguinte
     Page: Páxina
+    Previous: Anterior
   SilverStripe\Forms\MoneyField:
     FIELDLABELAMOUNT: Cantidade
     FIELDLABELCURRENCY: Moeda

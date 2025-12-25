@@ -125,10 +125,6 @@ class SearchableDropdownTraitTest extends SapphireTest
     public function provideGetValueArray(): array
     {
         return [
-            'empty' => [
-                'value' => '',
-                'expected' => [],
-            ],
             'array single form builder' => [
                 'value' => ['label' => 'MyTitle15', 'value' => '10', 'selected' => false],
                 'expected' => [10],
@@ -140,13 +136,17 @@ class SearchableDropdownTraitTest extends SapphireTest
                 ],
                 'expected' => [10, 15],
             ],
+            'array simple ints' => [
+                'value' => [2, 4],
+                'expected' => [2, 4],
+            ],
+            'array simple strings' => [
+                'value' => ['6', '8'],
+                'expected' => [6, 8],
+            ],
             'string int' => [
                 'value' => '3',
                 'expected' => [3],
-            ],
-            'zero string' => [
-                'value' => '0',
-                'expected' => [],
             ],
             'datalist' => [
                 'value' => '<DataListValue>',
@@ -160,6 +160,14 @@ class SearchableDropdownTraitTest extends SapphireTest
                 'value' => new stdClass(),
                 'expected' => [],
             ],
+            'empty' => [
+                'value' => '',
+                'expected' => [],
+            ],
+            'zero string' => [
+                'value' => '0',
+                'expected' => [],
+            ],
             'negative int' => [
                 'value' => -1,
                 'expected' => [],
@@ -168,7 +176,86 @@ class SearchableDropdownTraitTest extends SapphireTest
                 'value' => '-1',
                 'expected' => [],
             ],
+            'array - empty' => [
+                'value' => [],
+                'expected' => [],
+            ],
+            'array - empty string' => [
+                'value' => [''],
+                'expected' => [],
+            ],
+            'array - zero string' => [
+                'value' => ['0'],
+                'expected' => [],
+            ],
         ];
+    }
+
+    public static function provideDataValue(): array
+    {
+        // Note that not all combinations are tested - we mostly rely on testGetValueArray for the variations.
+        return [
+            'array single form builder' => [
+                'name' => 'MyFieldID',
+                'value' => ['label' => 'MyTitle15', 'value' => '10', 'selected' => false],
+                'expected' => 10,
+            ],
+            'array single form builder (multi field style name)' => [
+                'name' => 'MyField',
+                'value' => ['label' => 'MyTitle15', 'value' => '10', 'selected' => false],
+                'expected' => [10],
+            ],
+            'array simple int' => [
+                'name' => 'MyFieldID',
+                'value' => [2],
+                'expected' => 2,
+            ],
+            'array simple int (multi field style name)' => [
+                'name' => 'MyField',
+                'value' => [2],
+                'expected' => [2],
+            ],
+            'string int' => [
+                'name' => 'MyFieldID',
+                'value' => '3',
+                'expected' => 3,
+            ],
+            'string int (multi field style name)' => [
+                'name' => 'MyField',
+                'value' => '3',
+                'expected' => [3],
+            ],
+            'array - empty' => [
+                'name' => 'MyFieldID',
+                'value' => [],
+                'expected' => 0,
+            ],
+            'array - empty (multi field style name)' => [
+                'name' => 'MyField',
+                'value' => [],
+                'expected' => [],
+            ],
+            'array - zero string' => [
+                'name' => 'MyFieldID',
+                'value' => ['0'],
+                'expected' => 0,
+            ],
+            'array - zero string (multi field style name)' => [
+                'name' => 'MyField',
+                'value' => ['0'],
+                'expected' => [],
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideDataValue
+     */
+    public function testDataValue(string $name, mixed $value, int|array $expected): void
+    {
+        $field = new SearchableDropdownField($name, 'MyField', Team::get());
+        $field->setValue($value);
+        $this->assertSame($expected, $field->dataValue());
     }
 
     public function testGetSchemaDataDefaults(): void

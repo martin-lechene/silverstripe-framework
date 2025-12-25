@@ -22,7 +22,9 @@ si:
   SilverStripe\Forms\GridField\GridFieldDetailForm:
     Save: 'සේවි කරන්න'
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: පසු
     Page: පිටුව
+    Previous: පෙර
   SilverStripe\ORM\DataObject:
     PLURALNAME: 'දත්ත වස්තු'
     SINGULARNAME: 'දත්ත වස්තුව'

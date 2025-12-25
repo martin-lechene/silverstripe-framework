@@ -99,9 +99,15 @@ en:
     CURRENT_PASSWORD_MISSING: 'You must enter your current password.'
     LOGGED_IN_ERROR: 'You must be logged in to change your password.'
     MAXIMUM: 'Passwords must be at most {max} characters long.'
+    MEDIUM: Medium
     RANDOM_IF_EMPTY: 'If this is left blank then a random password will be automatically generated.'
     SHOWONCLICKTITLE: 'Change Password'
+    STRENGTH: 'Password strength: {strengthLabel}'
+    STRONG: Strong
     VALIDATIONSTRONGPASSWORD: 'The password strength is too low. Please use a stronger password.'
+    VERYSTRONG: 'Very strong'
+    VERYWEAK: 'Very weak'
+    WEAK: Weak
   SilverStripe\Forms\DateField:
     NOTSET: 'not set'
     TODAY: today
@@ -137,6 +143,7 @@ en:
     TABMAIN: Main
   SilverStripe\Forms\GridField\GridField:
     Add: 'Add {name}'
+    AddNew: 'Add new {name}'
     CSVEXPORT: 'Export to CSV'
     CSVIMPORT: 'Import CSV'
     Filter: Filter
@@ -182,9 +189,19 @@ en:
     Search_Default: Search
   SilverStripe\Forms\GridField\GridFieldGroupDeleteAction:
     UnlinkSelfFailure: 'Cannot remove yourself from this group, you will lose admin rights'
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Close
+  SilverStripe\Forms\GridField\GridFieldLevelUp:
+    NavigateUp: 'Navigate up a level'
+  SilverStripe\Forms\GridField\GridFieldLevelup:
+    NavigateUp: 'Navigate up a level'
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    First: First
+    Last: Last
+    Next: Next
     OF: of
     Page: Page
+    Previous: Previous
     View: View
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: View
@@ -227,6 +244,7 @@ en:
       one: 'A Data Object'
       other: '{count} Data Objects'
     SINGULARNAME: 'Data Object'
+    VALUE_SET_FOR_GENERATED_COLUMN: 'Cannot set a value for generated field "{field}"'
     many_many_FileTracking: 'File tracking'
     many_many_LinkTracking: 'Link tracking'
   SilverStripe\ORM\FieldType\DBBoolean:

@@ -64,8 +64,12 @@ es_MX:
     EDIT: Editar
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Buscar
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Cerrar
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Siguiente
     Page: Página
+    Previous: Anterior
     View: Ver
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Ver

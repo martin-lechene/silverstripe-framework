@@ -75,6 +75,8 @@ sr_RS@latin:
     EDIT: Izmeni
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Pretraži
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Zatvori
   SilverStripe\Forms\GridField\GridFieldPaginator:
     OF: od
     Page: Stranica

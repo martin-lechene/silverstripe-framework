@@ -118,7 +118,10 @@ fi_FI:
     Search_Default: Haku
   SilverStripe\Forms\GridField\GridFieldGroupDeleteAction:
     UnlinkSelfFailure: 'Et voi siirtää itseäsi pois tästä ryhmästä: menettäisit pääkäyttäjän oikeudet'
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Sulje
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Seuraava
     OF: /
     Page: Sivu
     View: Näytä

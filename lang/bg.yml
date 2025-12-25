@@ -96,9 +96,13 @@ bg:
     EDIT: Редактиране
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Търси
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Затвори
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Следващо
     OF: от
     Page: Страница
+    Previous: Предишно
     View: 'Преглед на'
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Преглед

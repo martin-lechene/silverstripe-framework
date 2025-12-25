@@ -7,7 +7,8 @@ nl:
     EDITINFO: 'Bewerk dit bestand'
     REMOVE: Verwijder
   SilverStripe\Control\ChangePasswordEmail_ss:
-    CHANGEPASSWORDFOREMAIL: 'Het wachtwoord voor het account met e-mailadres {email} is zojuist aangepast. Heb je geen wachtwoord aangepast, gebruik van onderstaande knop om uit veiligheidsoverwegingen je wachtwoord opnieuw in te stellen.'
+    CHANGEPASSWORDFOREMAIL: 'Het wachtwoord voor het account met e-mailadres {email} is zojuist aangepast. Heb je geen wachtwoord aangepast, gebruik dan onderstaande knop om je wachtwoord opnieuw in te stellen.'
+    CHANGEPASSWORDFOREMAIL2: 'Het wachtwoord voor het account met e-mailadres {email} is zojuist aangepast. Heb je geen wachtwoord aangepast, gebruik dan onderstaande knop om je wachtwoord te veranderen.'
     CHANGEPASSWORDTEXT1: 'Je hebt het wachtwoord veranderd voor'
     CHANGEPASSWORDTEXT3: 'Wachtwoord opnieuw instellen'
     HELLO: Hallo
@@ -16,6 +17,7 @@ nl:
     TEXT1: 'Je hebt aangegeven je wachtwoord te zijn vergeten. Klik op de knop '
     TEXT2: 'reset wachtwoord'
     TEXT3: ', om je wachtwoord opnieuw in te stellen voor '
+    TEXT4: 'Als de bovenstaande link niet werkt, kopieer en plak de in de adresbalk van uw browser.'
   SilverStripe\Control\Middleware\ConfirmationMiddleware\Url:
     CONFIRMATION_DESCRIPTION: 'De URL is: "{url}"'
     CONFIRMATION_NAME: 'URL is afgeschermd'
@@ -25,6 +27,40 @@ nl:
   SilverStripe\Control\RequestProcessor:
     INVALID_REQUEST: 'Fout bij verwerken'
     REQUEST_ABORTED: 'Fout bij verwerken (geannuleerd)'
+  SilverStripe\Core\Validation\FieldValidation\BooleanFieldValidator:
+    INVALID: 'Ongeldige waarde'
+  SilverStripe\Core\Validation\FieldValidation\DateFieldValidator:
+    INVALID: 'Ongeldige datum'
+    TOOLARGE: 'Waarde kan niet nieuwe zijn dan {maxValue}'
+    TOOSMALL: 'Waarde kan niet ouder zijn dan {minValue}'
+  SilverStripe\Core\Validation\FieldValidation\DatetimeFieldValidator:
+    INVALID: 'Ongeldige datum/tijd'
+  SilverStripe\Core\Validation\FieldValidation\DecimalFieldValidator:
+    TOOLARGE: 'Kan niet meer dan {wholeSize} cijfers bevatten, inclusief {decimalSize} decimalen'
+  SilverStripe\Core\Validation\FieldValidation\EmailFieldValidator:
+    INVALID: 'Ongeldig e-mailadres'
+  SilverStripe\Core\Validation\FieldValidation\IntFieldValidator:
+    WRONGTYPE: 'Moet een getal zijn'
+  SilverStripe\Core\Validation\FieldValidation\IpFieldValidator:
+    INVALID: 'Ongeldig IP-adres'
+  SilverStripe\Core\Validation\FieldValidation\LocaleFieldValidator:
+    INVALID: 'Ongeldige taal'
+  SilverStripe\Core\Validation\FieldValidation\NumericFieldValidator:
+    NOTNUMERIC: 'Moet numeriek zijn'
+    TOOLARGE: 'Waarde kan niet hoger zijn dan {maxValue}'
+    TOOSMALL: 'Waarde kan niet lager zijn dan {minValue}'
+  SilverStripe\Core\Validation\FieldValidation\NumericNonStringFieldValidator:
+    WRONGTYPE: 'Moet numeriek zijn en geen tekenreeks'
+  SilverStripe\Core\Validation\FieldValidation\OptionFieldValidator:
+    NOTALLOWED: 'Geen toegestane waarde'
+  SilverStripe\Core\Validation\FieldValidation\StringFieldValidator:
+    TOOLONG: 'Kan niet meer dan {maxLength} tekens bevatten'
+    TOOSHORT: 'Moet minimaal {minLength} tekens bevatten'
+    WRONGTYPE: 'Moet een tekenreeks zijn'
+  SilverStripe\Core\Validation\FieldValidation\TimeFieldValidator:
+    INVALID: 'Ongeldige tijd'
+  SilverStripe\Core\Validation\FieldValidation\UrlFieldValidator:
+    INVALID: 'Ongeldige URL'
   SilverStripe\Dev\BulkLoader:
     CANNOT_CREATE: "Niet toegestaan om '{type}' items aan te maken"
     CANNOT_DELETE: "Niet toegestaan om '{type}' items te verwijderen"
@@ -65,6 +101,7 @@ nl:
     MAXIMUM: 'Een wachtwoord mag maximaal {max} karakters hebben.'
     RANDOM_IF_EMPTY: 'Als je dit veld leeg laat, wordt er automatisch een willekeurig wachtwoord gegenereerd.'
     SHOWONCLICKTITLE: 'Verander wachtwoord'
+    VALIDATIONSTRONGPASSWORD: 'Het wachtwoord is te eenvoudig. Gebruik een sterker wachtwoord.'
   SilverStripe\Forms\DateField:
     NOTSET: 'niet ingesteld'
     TODAY: vandaag
@@ -132,7 +169,8 @@ nl:
     NEW: 'Nieuwe item toevoegen'
     NEXT: 'Naar volgende item'
     PREVIOUS: 'Naar vorige item'
-    SAVETOASTMESSAGE: '{type} "{name}" is opgeslagen'
+    SAVEDUP: 'Succesvol opgeslagen'
+    SAVETOASTMESSAGE: '{type} "{title}" is opgeslagen'
     ViewPermissionsFailure: 'Onvoldoende rechten om "{ObjectTitle}" te bekijken'
   SilverStripe\Forms\GridField\GridFieldEditButton:
     EDIT: Bewerken
@@ -142,9 +180,13 @@ nl:
     Search_Default: Zoek
   SilverStripe\Forms\GridField\GridFieldGroupDeleteAction:
     UnlinkSelfFailure: 'Je kan jezelf niet verwijderen van deze groep, omdat je dan geen admin-rechten meer hebt.'
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Sluiten
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Volgende
     OF: van
     Page: Pagina
+    Previous: Vorige
     View: Bekijk
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Bekijk
@@ -155,11 +197,13 @@ nl:
     FIELDLABELAMOUNT: Aantal
     FIELDLABELCURRENCY: Munteenheid
     INVALID_CURRENCY: 'Valuta {currency} is niet toegestaan'
+    INVALID_CURRENCY_2: "Valuta {currency} staat niet in de lijst met toegestane valuta's. Toegestane valuta's zijn: {currencies}."
   SilverStripe\Forms\MultiSelectField:
     SOURCE_VALIDATION: 'Selecteer een optie uit de lijst. {value} is geen geldige keuze.'
   SilverStripe\Forms\NullableField:
     IsNullLabel: 'Is null'
   SilverStripe\Forms\NumericField:
+    INVALID: 'Ongeldig getal'
     VALIDATION: "'{value}' is geen getal, enkel getallen worden door dit veld geaccepteerd"
   SilverStripe\Forms\SearchableDropdownTrait:
     SELECT: Selecteer...
@@ -171,6 +215,7 @@ nl:
     VALIDATEFORMAT: 'Vul een geldig datumformaat in ({format})'
   SilverStripe\Forms\UrlField:
     INVALID: 'Vul een geldige URL in'
+    INVALID_WITH_PROTOCOL: 'Voer een geldige URL in, inclusief een protocol, bijvoorbeeld {protocol}://example.com'
   SilverStripe\ORM\DataObject:
     FILTER_WITHINRANGE_FROM: Afzender
     FILTER_WITHINRANGE_TO: Tot
@@ -238,9 +283,12 @@ nl:
   SilverStripe\ORM\Hierarchy:
     LIMITED_TITLE: 'Teveel onderliggende items ({count})'
   SilverStripe\ORM\Hierarchy\Hierarchy:
+    ChildTypeNotAllowed: "Type \"{type}\" mag niet ondergeschikt zijn aan dit bovenliggende item\_"
     InfiniteLoopNotAllowed: 'Oneindige lus gevonden in "{type}" hiërarchie. Wijzig het hogere niveau om dit op te lossen'
     LIMITED_TITLE: 'Teveel onderliggende items ({count})'
+    TypeOnRootNotAllowed: 'Type "{type}" is niet toegestaan op het hoogste niveau'
   SilverStripe\ORM\Search\SearchContextForm:
+    FILTERLABELTEXT: 'Zoek naar "{model}"'
     OpenFilter: 'Zoeken en filteren openen'
   SilverStripe\ORM\ValidationException:
     DEFAULT_ERROR: Validatiefout

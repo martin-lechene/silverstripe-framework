@@ -78,9 +78,13 @@ mi:
     EDIT: Whakatika
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Rapu
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Kati
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Panuku
     OF: o
     Page: Whārangi
+    Previous: Tōmua
     View: Tiro
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Tiro

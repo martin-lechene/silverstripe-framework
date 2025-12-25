@@ -105,8 +105,12 @@ fr:
     Search_Default: Rechercher
   SilverStripe\Forms\GridField\GridFieldGroupDeleteAction:
     UnlinkSelfFailure: "Impossible de retirer votre propre profil de ce groupe, vous perdriez vos droits d'administration"
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Fermer
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Suivant
     OF: de
+    Previous: Précédent
     View: Vue
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Vue

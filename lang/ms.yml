@@ -14,7 +14,9 @@ ms:
   SilverStripe\Forms\FormScaffolder:
     TABMAIN: Utama
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Berikut
     Page: Halaman
+    Previous: Dahulu
   SilverStripe\ORM\DataObject:
     PLURALNAME: 'Objek-objek Data'
     SINGULARNAME: 'Objek Data'

@@ -60,9 +60,13 @@ hr:
     EDIT: Uredi
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Traži
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Zatvori
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Slijedeći
     OF: od
     Page: Stranica
+    Previous: Prethodni
     View: Pregled
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Pregled

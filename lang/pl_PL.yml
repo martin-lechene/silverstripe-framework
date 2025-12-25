@@ -26,6 +26,7 @@ pl_PL:
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Szukaj
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Następny
     Page: Strona
   SilverStripe\Forms\UrlField:
     INVALID: 'Wprowadź poprawny adres URL'

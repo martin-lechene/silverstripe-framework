@@ -143,9 +143,13 @@ eo:
     Search_Default: Serĉi
   SilverStripe\Forms\GridField\GridFieldGroupDeleteAction:
     UnlinkSelfFailure: 'Ne povas forigi vin el ĉi tiu grupo; vi perdus administrajn rajtojn'
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Fermi
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Sekva
     OF: de
     Page: Paĝo
+    Previous: Antaŭa
     View: Vido
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Vido

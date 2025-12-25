@@ -76,9 +76,13 @@ nb:
     EDIT: Rediger
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Søk
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Lukk
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Neste
     OF: av
     Page: Side
+    Previous: Forrige
     View: Viser
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Viser

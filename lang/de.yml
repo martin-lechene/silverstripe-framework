@@ -98,6 +98,7 @@ de:
     TABMAIN: Hauptteil
   SilverStripe\Forms\GridField\GridField:
     Add: '{name} hinzufügen'
+    AddNew: '{name} neu hinzufügen'
     CSVEXPORT: 'Als CSV-Datei exportieren'
     CSVIMPORT: 'CSV importieren'
     FilterBy: 'Filtern nach'
@@ -142,9 +143,13 @@ de:
     Search_Default: Suche
   SilverStripe\Forms\GridField\GridFieldGroupDeleteAction:
     UnlinkSelfFailure: 'Sie können sich nicht selber von dieser Gruppe entfernen, Sie würden Admin-Rechte verlieren.'
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Schließen
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Weiter
     OF: von
     Page: Seite
+    Previous: vorherige
     View: Anzeigen
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Anzeigen

@@ -99,9 +99,13 @@ sv:
     Search_Default: Sök
   SilverStripe\Forms\GridField\GridFieldGroupDeleteAction:
     UnlinkSelfFailure: 'Du kan inte radera dig själv från den här gruppen, då du då kommer att förlora dina admin-rättigheter'
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Stäng
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Nästa
     OF: av
     Page: Sida
+    Previous: Föregående
     View: Visa
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Visa

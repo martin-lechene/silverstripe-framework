@@ -49,9 +49,13 @@ pt:
     Save: Guardar
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Procurar
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Fechar
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Próximo
     OF: de
     Page: Página
+    Previous: Anterior
   SilverStripe\Forms\MoneyField:
     FIELDLABELAMOUNT: Quantidade
     FIELDLABELCURRENCY: Moeda

@@ -74,9 +74,13 @@ et_EE:
     EDIT: Redigeeri
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Otsi
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Sulge
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Eelmine
     OF: /
     Page: Leht
+    Previous: Järgmine
     View: Kuva
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Kuva

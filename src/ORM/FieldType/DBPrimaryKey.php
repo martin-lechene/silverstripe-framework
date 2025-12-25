@@ -56,7 +56,7 @@ class DBPrimaryKey extends DBInt
 
     public function scaffoldSearchField($title = null)
     {
-        parent::scaffoldFormField($title);
+        return parent::scaffoldFormField($title);
     }
 
     public function setValue($value, $record = null, $markChanged = true)

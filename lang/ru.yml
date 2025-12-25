@@ -96,9 +96,13 @@ ru:
     EDIT: Редактировать
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Поиск
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Закрыть
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Вперёд
     OF: из
     Page: Страница
+    Previous: Предыдущ.
     View: Просмотр
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Просмотр

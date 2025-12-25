@@ -63,9 +63,13 @@ th:
     EDIT: แก้ไข
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: ค้นหา
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: ปิด
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: ถัดไป
     OF: จาก
     Page: หน้า
+    Previous: ก่อนหน้า
     View: เปิดดู
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: เปิดดู

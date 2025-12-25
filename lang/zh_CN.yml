@@ -22,8 +22,12 @@ zh_CN:
     Save: 保存
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: 搜索
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: 关闭
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: 下一页
     Page: 页面
+    Previous: 上一页
   SilverStripe\ORM\DataObject:
     PLURALNAME: 数据对象
     SINGULARNAME: 数据对象

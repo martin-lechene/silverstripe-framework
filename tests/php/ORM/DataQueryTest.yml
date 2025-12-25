@@ -90,3 +90,20 @@ SilverStripe\ORM\Tests\SQLSelectTest\CteRecursiveObject:
   child-of-child2:
     Title: 'child of child2'
     Parent: =>SilverStripe\ORM\Tests\SQLSelectTest\CteRecursiveObject.child2
+
+SilverStripe\ORM\Tests\DataQueryTest\ObjectJ:
+  distinct1:
+    Title: 'Distinct'
+  distinct2:
+    Title: 'OtherDistinct'
+
+SilverStripe\ORM\Tests\DataQueryTest\ObjectK:
+  sam1:
+    Name: 'sam'
+    TestJ: =>SilverStripe\ORM\Tests\DataQueryTest\ObjectJ.distinct1
+  sam2:
+    Name: 'sam'
+    TestJ: =>SilverStripe\ORM\Tests\DataQueryTest\ObjectJ.distinct1
+  john1:
+    Name: 'john'
+    TestJ: =>SilverStripe\ORM\Tests\DataQueryTest\ObjectJ.distinct2

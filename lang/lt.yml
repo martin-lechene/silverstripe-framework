@@ -83,9 +83,13 @@ lt:
     EDIT: Redaguoti
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Ieškoti
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Uždaryti
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Sekantis
     OF: iš
     Page: Puslapis
+    Previous: Ankstesnis
     View: Rodoma
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Rodoma

@@ -8,6 +8,8 @@ ast:
     TODAY: hoi
   SilverStripe\Forms\DropdownField:
     CHOOSE: (Escoyer)
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Zarrar
   SilverStripe\Forms\NullableField:
     IsNullLabel: 'Ye nulu'
   SilverStripe\ORM\DataObject:

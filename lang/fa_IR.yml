@@ -87,9 +87,13 @@ fa_IR:
     EDIT: ویرایش
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: جستجو
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: بستن
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: بعدی
     OF: از
     Page: صفحه
+    Previous: قبلی
     View: نمایش
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: نمایش

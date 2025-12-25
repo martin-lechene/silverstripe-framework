@@ -66,9 +66,13 @@ af:
     EDIT: Verander
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Soek
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: 'Maak toe'
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Volgende
     OF: van
     Page: Bladsy
+    Previous: Vorige
     View: Wys
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Wys

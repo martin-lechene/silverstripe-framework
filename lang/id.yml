@@ -78,9 +78,13 @@ id:
     Saved: 'Simpan {name} {link}'
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Cari
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Tutup
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Selanjutnya
     OF: dari
     Page: Laman
+    Previous: Sebelumnya
     View: Tampilkan
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Tampilkan

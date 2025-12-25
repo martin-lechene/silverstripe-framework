@@ -138,9 +138,13 @@ sk:
     Search_Default: Hľadať
   SilverStripe\Forms\GridField\GridFieldGroupDeleteAction:
     UnlinkSelfFailure: 'Z tejto skupiny sa nemôžete odstrániť, stratíte práva správcu'
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Zavrieť
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Ďalej
     OF: z
     Page: Stránka
+    Previous: Predchádzajúci
     View: Zobraziť
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Zobraziť

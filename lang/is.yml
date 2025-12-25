@@ -38,8 +38,12 @@ is:
     EDIT: Breyta
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Leita
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Loka
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Næsta
     Page: Síða
+    Previous: Fyrri
   SilverStripe\Forms\MoneyField:
     FIELDLABELAMOUNT: Reikningur
     FIELDLABELCURRENCY: Gjaldmiðill

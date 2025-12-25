@@ -371,7 +371,7 @@ trait SearchableDropdownTrait
             //   0 => '10',
             //   1 => '15'
             // ];
-            return array_map('intval', $arr);
+            return array_map('intval', array_filter($arr));
         }
         if ((is_string($value) || is_int($value)) && ctype_digit((string) $value) && $value != 0) {
             return [(int) $value];
@@ -433,6 +433,18 @@ trait SearchableDropdownTrait
     {
         Deprecation::noticeWithNoReplacment('5.4.0', 'Will be removed in favour of the `FormField::validate()` method in a future major release.');
         return $this->extendValidationResult(true, $validator);
+    }
+
+    public function dataValue()
+    {
+        $name = $this->getName();
+        $ids = $this->getValueArray();
+        // This is how we distinguish between single and multi fields in saveInto()
+        // so use the same logic here.
+        if (substr($name, -2) === 'ID') {
+            return $ids[0] ?? 0;
+        }
+        return $ids;
     }
 
     public function getSchemaDataType(): string

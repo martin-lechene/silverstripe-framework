@@ -30,7 +30,9 @@ fo:
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Leita
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Næsta
     Page: Síða
+    Previous: Fyrra
   SilverStripe\ORM\DataObject:
     PLURALNAME: 'Dáta eindir'
     SINGULARNAME: 'Dáta eind'

@@ -76,9 +76,13 @@ sr:
     EDIT: Измени
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Претражи
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Затвори
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Следеће
     OF: од
     Page: Страница
+    Previous: Претходно
     View: Преглед
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Преглед

@@ -27,9 +27,13 @@ he_IL:
     Save: שמור
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: חיפוש
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: סגירה
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: הבא
     OF: מתוך
     Page: עמוד
+    Previous: הקודם
   SilverStripe\ORM\DataObject:
     FILTER_WITHINRANGE_FROM: מ־
     FILTER_WITHINRANGE_TO: עד

@@ -34,8 +34,12 @@ lv:
     Save: Saglabāt
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Meklēt
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Aizvērt
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Nākamais
     Page: Lapa
+    Previous: Iepriekšējais
   SilverStripe\Forms\MoneyField:
     FIELDLABELAMOUNT: Skaits
     FIELDLABELCURRENCY: Valūta

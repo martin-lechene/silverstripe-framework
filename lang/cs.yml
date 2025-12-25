@@ -88,9 +88,13 @@ cs:
     EDIT: Editovat
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Hledat
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Zavřít
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Další
     OF: z
     Page: Stránka
+    Previous: Předchozí
     View: Zobrazit
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Zobrazit

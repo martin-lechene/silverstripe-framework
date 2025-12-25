@@ -51,6 +51,7 @@ de_DE:
     Search: 'Suche "{name}"'
     Search_Default: Suche
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Nächste
     Page: Seite
     View: Anzeigen
   SilverStripe\Forms\GridField\GridFieldViewButton:

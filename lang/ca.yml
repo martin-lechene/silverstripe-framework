@@ -33,7 +33,9 @@ ca:
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Cerca
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Següent
     Page: Pàgina
+    Previous: Anterior
   SilverStripe\ORM\DataObject:
     PLURALNAME: 'Objectes de dades'
     SINGULARNAME: 'Objecte de dades'

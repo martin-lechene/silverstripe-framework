@@ -82,9 +82,13 @@ zh:
     EDIT: 编辑
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: 查询
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: 关闭
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: 下一页
     OF: 的
     Page: 页面
+    Previous: 前一页
     View: 查看
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: 查看

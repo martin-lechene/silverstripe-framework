@@ -17,8 +17,12 @@ zh_TW:
     TABMAIN: 主要
   SilverStripe\Forms\GridField\GridFieldDetailForm:
     Save: 儲存
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: 關閉
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: 下一個
     Page: 網頁
+    Previous: 上一個
   SilverStripe\Security\BasicAuth:
     ENTERINFO: 請輸入帳號密碼。
     ERRORNOTADMIN: 那個使用者不是管理員。

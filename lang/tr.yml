@@ -43,8 +43,12 @@ tr:
     Save: Kaydet
   SilverStripe\Forms\GridField\GridFieldFilterHeader:
     Search_Default: Ara
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Kapat
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Sonraki
     Page: Sayfa
+    Previous: Önceki
   SilverStripe\Forms\NullableField:
     IsNullLabel: 'Boş değer'
   SilverStripe\ORM\DataObject:

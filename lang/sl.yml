@@ -79,6 +79,7 @@ sl:
     TABMAIN: Osnovno
   SilverStripe\Forms\GridField\GridField:
     Add: 'Dodaj {name}'
+    AddNew: Dodaj
     CSVEXPORT: 'Izvozi kot CSV-datoteko'
     CSVIMPORT: 'Uvozi CSV'
     FilterBy: 'Filtriraj po'
@@ -104,7 +105,7 @@ sl:
     Create: Ustvari
     Delete: Izbriši
     DeletePermissionsFailure: 'Nimate dovoljenja za brisanje'
-    Deleted: 'Izbrisanih {type} {name}'
+    Deleted: 'Izbrisal {type} "{name}"'
     Save: Shrani
     Saved: 'Shranjeno {name} {link}'
   SilverStripe\Forms\GridField\GridFieldDetailForm_ItemRequest:
@@ -121,9 +122,13 @@ sl:
     Search_Default: Najdi
   SilverStripe\Forms\GridField\GridFieldGroupDeleteAction:
     UnlinkSelfFailure: 'Ne moremo vas odstraniti iz te skupine, saj boste izgubili administratorske pravice'
+  SilverStripe\Forms\GridField\GridFieldImportButton:
+    CLOSE_MODAL: Zapri
   SilverStripe\Forms\GridField\GridFieldPaginator:
+    Next: Naprej
     OF: od
     Page: Stran
+    Previous: Nazaj
     View: Prikaži
   SilverStripe\Forms\GridField\GridFieldViewButton:
     VIEW: Prikaži
