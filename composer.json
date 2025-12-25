@@ -22,7 +22,7 @@
         "bin/sake"
     ],
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
         "composer-runtime-api": "^2.0",
         "composer/installers": "^2.3",
         "guzzlehttp/guzzle": "^7.9",
